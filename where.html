@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>:where() field — practice the CSS zero-specificity selector</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #14141d;
+            --bg-panel: #1c1c29;
+            --bg-inset: #101018;
+            --bg-tile: #232333;
+            --line: #2f2f43;
+            --ink: #ebebf4;
+            --muted: #8a8aa4;
+            --faint: #5b5b74;
+            --scan: #c084fc;                 /* accent — violet for :where() */
+            --scan-glow: #c084fc66;
+            --goal: #f5b54b;                 /* hard */
+            --adv: #f4708a;                  /* harder (coral) */
+            --easyc: #2dd4bf;                /* easy */
+            --miss: #f4708a;
+            --info: #2dd4bf;
+            --solved: #4ade80;
+            --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+            --disp: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+        }
+
+        * { box-sizing: border-box }
+        html, body { margin: 0 }
+
+        body {
+            background:
+                radial-gradient(1100px 600px at 80% -10%, #2a1d40 0%, transparent 55%),
+                radial-gradient(900px 500px at -5% 110%, #1d2433 0%, transparent 50%),
+                var(--bg);
+            color: var(--ink);
+            font-family: var(--disp);
+            line-height: 1.5;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .wrap { max-width: 1080px; margin: 0 auto; padding: 22px 20px 60px }
+
+        header.top {
+            display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+            padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid var(--line)
+        }
+        .brand { display: flex; align-items: baseline; gap: 12px; flex: 1; min-width: 230px }
+        .logo { font-family: var(--mono); font-weight: 700; font-size: 22px; letter-spacing: -.5px }
+        .logo b { color: var(--scan) }
+        .tagline { color: var(--muted); font-size: 13px }
+        .ref-btn {
+            font-family: var(--mono); font-size: 12.5px; color: var(--muted);
+            background: transparent; border: 1px solid var(--line); border-radius: 8px;
+            padding: 8px 13px; cursor: pointer; transition: .15s; letter-spacing: .03em
+        }
+        .ref-btn:hover { color: var(--ink); border-color: var(--scan) }
+
+        .tiers { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap }
+        .tier-pill {
+            font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+            padding: 5px 11px; border-radius: 20px; border: 1px solid var(--line);
+            color: var(--faint); background: var(--bg-panel)
+        }
+        .tier-pill.on[data-t="easy"] { color: var(--easyc); border-color: #2a4a45; box-shadow: 0 0 12px #2dd4bf44 }
+        .tier-pill.on[data-t="hard"] { color: var(--goal); border-color: #4a3f22; box-shadow: 0 0 12px #f5b54b44 }
+        .tier-pill.on[data-t="harder"] { color: var(--adv); border-color: #4a2a33; box-shadow: 0 0 12px #f4708a44 }
+
+        .track { display: flex; gap: 5px; margin-bottom: 22px; flex-wrap: wrap }
+        .seg {
+            height: 8px; flex: 1; min-width: 14px; border-radius: 4px;
+            background: var(--bg-tile); border: 1px solid var(--line); cursor: pointer; transition: .18s
+        }
+        .seg:hover { transform: translateY(-2px) }
+        .seg[data-tier="easy"] { border-color: #2a4a45 }
+        .seg[data-tier="hard"] { border-color: #4a3f22 }
+        .seg[data-tier="harder"] { border-color: #4a2a33 }
+        .seg.done { background: var(--easyc); border-color: var(--easyc); box-shadow: 0 0 10px #2dd4bf55 }
+        .seg.done[data-tier="hard"] { background: var(--goal); border-color: var(--goal); box-shadow: 0 0 10px #f5b54b55 }
+        .seg.done[data-tier="harder"] { background: var(--adv); border-color: var(--adv); box-shadow: 0 0 10px #f4708a55 }
+        .seg.revealed { background: var(--faint) !important; border-color: var(--faint) !important; box-shadow: none !important }
+        .seg.here { outline: 2px solid var(--scan); outline-offset: 2px }
+        .seg.locked { opacity: .3; cursor: not-allowed }
+        .seg.locked:hover { transform: none }
+
+        .goal-card { margin-bottom: 18px }
+        .eyebrow {
+            font-family: var(--mono); font-size: 11.5px; letter-spacing: .2em; text-transform: uppercase;
+            display: flex; gap: 10px; align-items: center; margin-bottom: 9px; flex-wrap: wrap
+        }
+        .eyebrow .tt[data-t="easy"] { color: var(--easyc) }
+        .eyebrow .tt[data-t="hard"] { color: var(--goal) }
+        .eyebrow .tt[data-t="harder"] { color: var(--adv) }
+        .eyebrow .sep { color: var(--faint) }
+        .eyebrow .cc { color: var(--muted) }
+        .eyebrow .lv { color: var(--faint); margin-left: auto }
+        .goal-text { font-size: 20px; font-weight: 500; letter-spacing: -.01em; max-width: 62ch }
+        .goal-text code {
+            font-family: var(--mono); font-size: .86em; background: var(--bg-inset);
+            padding: 1px 6px; border-radius: 5px; color: var(--info); border: 1px solid var(--line)
+        }
+
+        /* specificity budget chip */
+        .budget {
+            display: inline-flex; align-items: center; gap: 8px; margin-top: 10px;
+            font-family: var(--mono); font-size: 12.5px; color: var(--muted);
+            background: var(--bg-panel); border: 1px solid var(--line); border-radius: 8px; padding: 7px 12px
+        }
+        .budget b { color: var(--scan); letter-spacing: .04em }
+        .budget .lab { font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--faint) }
+
+        .stage { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px }
+        .panel {
+            background: var(--bg-panel); border: 1px solid var(--line); border-radius: 14px;
+            overflow: hidden; display: flex; flex-direction: column; min-height: 230px
+        }
+        .panel-head {
+            display: flex; align-items: center; gap: 8px; padding: 11px 15px;
+            border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 11px;
+            letter-spacing: .16em; text-transform: uppercase; color: var(--faint)
+        }
+        .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint) }
+        .panel-head .live { margin-left: auto; color: var(--muted); text-transform: none; letter-spacing: .02em; font-size: 11.5px }
+        .panel-head .live b { color: var(--scan) }
+        .panel-head .live b.over { color: var(--miss) }
+
+        .preview {
+            padding: 18px; display: flex; flex-wrap: wrap; gap: 12px;
+            align-content: flex-start; align-items: flex-end; flex: 1; position: relative
+        }
+        .preview::after {
+            content: ""; position: absolute; inset: 0; pointer-events: none;
+            background: repeating-linear-gradient(0deg, transparent 0 3px, #ffffff05 3px 4px);
+            mix-blend-mode: overlay
+        }
+
+        .code {
+            flex: 1; margin: 0; padding: 16px; overflow: auto; background: var(--bg-inset);
+            font-family: var(--mono); font-size: 12.5px; line-height: 1.75; white-space: pre; color: #c9c9de
+        }
+        .t-punc { color: #5b5b74 }
+        .t-tag { color: #8aa2f5 }
+        .t-attr { color: #2dd4bf }
+        .t-str { color: #f5b54b }
+        .t-text { color: #d6d6e4 }
+
+        /* ---- field specimens (custom tags) ---- */
+        .preview tent, .preview cabin, .preview tree, .preview rock,
+        .preview fire, .preview lantern, .preview compass {
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+            background: var(--bg-tile); border: 1px solid var(--line); border-radius: 11px;
+            padding: 11px 12px 8px; min-width: 66px; transition: .2s; position: relative
+        }
+        .preview tent::before { content: "⛺" } .preview cabin::before { content: "🛖" }
+        .preview tree::before { content: "🌲" } .preview rock::before { content: "🪨" }
+        .preview fire::before { content: "🔥" } .preview lantern::before { content: "🏮" }
+        .preview compass::before { content: "🧭" }
+        .preview tent::before, .preview cabin::before, .preview tree::before, .preview rock::before,
+        .preview fire::before, .preview lantern::before, .preview compass::before { font-size: 26px; line-height: 1 }
+
+        .preview tent::after, .preview cabin::after, .preview tree::after, .preview rock::after,
+        .preview fire::after, .preview lantern::after, .preview compass::after {
+            content: attr(data-sig); font-family: var(--mono); font-size: 9.5px;
+            color: var(--muted); letter-spacing: .02em; max-width: 116px;
+            text-align: center; word-break: break-all
+        }
+
+        .preview .lit::before { filter: drop-shadow(0 0 8px #f5b54bdd) }
+        .preview .new::before { filter: drop-shadow(0 0 7px #2dd4bfcc) }
+        .preview .old::before { filter: drop-shadow(0 0 7px #8a8aa4cc) }
+        .preview [size="big"]::before { font-size: 34px }
+        .preview .closed { opacity: .55 }
+
+        /* containers */
+        .preview camp, .preview trail, .preview pack {
+            display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px;
+            background: var(--bg-inset); border: 1px dashed var(--line); border-radius: 11px;
+            padding: 30px 10px 10px; position: relative; min-width: 84px; min-height: 74px; transition: .2s
+        }
+        .preview camp::before, .preview trail::before, .preview pack::before {
+            position: absolute; top: 7px; left: 10px; font-family: var(--mono);
+            font-size: 10px; color: var(--faint); letter-spacing: .04em
+        }
+        .preview camp::before { content: "🏕 " attr(data-sig) }
+        .preview trail::before { content: "🥾 " attr(data-sig) }
+        .preview pack::before { content: "🎒 " attr(data-sig) }
+
+        /* match states */
+        .preview .scan-hit {
+            outline: 2px solid var(--scan); outline-offset: 2px;
+            box-shadow: 0 0 0 4px var(--scan-glow), 0 0 22px var(--scan-glow); border-radius: 8px
+        }
+        .preview .scan-miss {
+            outline: 2px solid var(--miss); outline-offset: 2px;
+            box-shadow: 0 0 0 4px #f4708a44; border-radius: 8px
+        }
+        .preview .scan-solved {
+            outline: 2px solid var(--solved); outline-offset: 2px;
+            box-shadow: 0 0 0 4px #4ade8044, 0 0 22px #4ade8055; border-radius: 8px
+        }
+
+        @media (prefers-reduced-motion: no-preference) {
+            .preview .scan-hit { animation: pop .22s ease }
+            .preview .scan-solved { animation: lock .35s ease }
+            @keyframes pop { from { transform: scale(.94) } to { transform: scale(1) } }
+            @keyframes lock { 0% { transform: scale(1) } 40% { transform: scale(1.06) } 100% { transform: scale(1) } }
+        }
+
+        /* console */
+        .console { background: var(--bg-panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 14px }
+        .prompt {
+            display: flex; align-items: center; gap: 10px; background: var(--bg-inset);
+            border: 1px solid var(--line); border-radius: 10px; padding: 4px 6px 4px 14px; transition: .15s
+        }
+        .prompt:focus-within { border-color: var(--scan); box-shadow: 0 0 0 3px var(--scan-glow) }
+        .chev { font-family: var(--mono); color: var(--scan); font-weight: 700 }
+        #sel {
+            flex: 1; background: transparent; border: 0; outline: 0; color: var(--ink);
+            font-family: var(--mono); font-size: 15.5px; padding: 12px 0
+        }
+        #sel::placeholder { color: var(--faint) }
+        .run {
+            font-family: var(--mono); font-weight: 700; font-size: 13px; letter-spacing: .06em;
+            background: var(--scan); color: #26103a; border: 0; border-radius: 8px;
+            padding: 11px 18px; cursor: pointer; transition: .15s; text-transform: uppercase; white-space: nowrap
+        }
+        .run:hover { filter: brightness(1.08) }
+        .run:active { transform: translateY(1px) }
+
+        .readout { margin-top: 12px; font-size: 14px; min-height: 22px; color: var(--muted); display: flex; gap: 9px; align-items: flex-start }
+        .readout .badge-state {
+            font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 5px;
+            text-transform: uppercase; letter-spacing: .08em; flex-shrink: 0; margin-top: 1px
+        }
+        .readout.ok { color: var(--ink) }
+        .readout.ok .badge-state { background: #123a2e; color: var(--solved) }
+        .readout.warn .badge-state { background: #3a2e12; color: var(--goal) }
+        .readout.err .badge-state { background: #3a1a24; color: var(--miss) }
+        .readout.idle .badge-state { background: var(--bg-tile); color: var(--faint) }
+
+        .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap }
+        .ghost {
+            font-family: var(--mono); font-size: 12.5px; color: var(--muted); letter-spacing: .03em;
+            background: transparent; border: 1px solid var(--line); border-radius: 8px;
+            padding: 10px 15px; cursor: pointer; transition: .15s
+        }
+        .ghost:hover { color: var(--ink); border-color: var(--muted) }
+        .ghost:disabled { opacity: .35; cursor: not-allowed }
+        .spacer { flex: 1 }
+        .nav { display: flex; gap: 8px }
+        .nav .ghost.next:not(:disabled) { border-color: var(--scan); color: var(--scan) }
+
+        .hint-bar {
+            margin-top: 12px; font-size: 13.5px; color: var(--muted); background: var(--bg-inset);
+            border: 1px dashed var(--line); border-radius: 9px; padding: 11px 14px; display: none
+        }
+        .hint-bar.show { display: block }
+        .hint-bar code { font-family: var(--mono); color: var(--goal) }
+
+        footer.foot { margin-top: 26px; color: var(--faint); font-size: 12px; text-align: center; font-family: var(--mono); letter-spacing: .03em }
+
+        /* reference drawer */
+        .scrim {
+            position: fixed; inset: 0; background: #0009; backdrop-filter: blur(2px);
+            opacity: 0; pointer-events: none; transition: .2s; z-index: 20
+        }
+        .scrim.show { opacity: 1; pointer-events: auto }
+        .drawer {
+            position: fixed; top: 0; right: 0; height: 100%; width: min(460px, 92vw); z-index: 21;
+            background: var(--bg-panel); border-left: 1px solid var(--line);
+            transform: translateX(100%); transition: transform .25s ease; overflow-y: auto; padding: 22px
+        }
+        .drawer.show { transform: none }
+        .drawer h2 { font-size: 16px; margin: 0 0 4px; font-family: var(--mono) }
+        .drawer h2 b { color: var(--scan) }
+        .drawer p.sub { color: var(--muted); font-size: 13px; margin: 0 0 18px }
+        .drawer .close {
+            position: absolute; top: 18px; right: 18px; background: transparent;
+            border: 1px solid var(--line); color: var(--muted); border-radius: 7px;
+            width: 30px; height: 30px; cursor: pointer; font-size: 15px
+        }
+        .drawer .close:hover { color: var(--ink); border-color: var(--scan) }
+        .ref-row { padding: 12px 0; border-top: 1px solid var(--line) }
+        .ref-row code { font-family: var(--mono); font-size: 13.5px; color: var(--scan); display: block; margin-bottom: 4px }
+        .ref-row span { font-size: 13px; color: var(--muted) }
+
+        /* cheer modal */
+        .modal-scrim {
+            position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 20px;
+            background: #0b0b12cc; backdrop-filter: blur(4px); opacity: 0; pointer-events: none; transition: .2s
+        }
+        .modal-scrim.show { opacity: 1; pointer-events: auto }
+        .cheer {
+            background: var(--bg-panel); border: 1px solid var(--line); border-radius: 18px;
+            padding: 34px 30px; max-width: 440px; width: 100%; text-align: center; position: relative;
+            transform: scale(.94); transition: transform .22s ease; box-shadow: 0 24px 70px #0008
+        }
+        .modal-scrim.show .cheer { transform: scale(1) }
+        .burst { font-size: 34px; color: var(--scan); margin-bottom: 8px }
+        @media (prefers-reduced-motion: no-preference) {
+            .modal-scrim.show .burst { animation: spin .7s ease }
+            @keyframes spin { from { transform: rotate(-40deg) scale(.4); opacity: 0 } to { transform: none; opacity: 1 } }
+        }
+        .cheer-tier { font-family: var(--mono); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--solved); margin-bottom: 6px }
+        .cheer h2 { margin: 0 0 14px; font-size: 26px; letter-spacing: -.02em }
+        .cheer-sel {
+            display: inline-block; font-family: var(--mono); font-size: 14px; color: var(--scan);
+            background: var(--bg-inset); border: 1px solid var(--line); border-radius: 8px;
+            padding: 8px 12px; margin-bottom: 6px; word-break: break-all
+        }
+        .cheer-spec { font-family: var(--mono); font-size: 11.5px; color: var(--faint); margin: 0 0 14px }
+        .cheer-spec b { color: var(--solved) }
+        .cheer-learn { font-size: 13.5px; color: var(--muted); margin: 0 0 22px; line-height: 1.6 }
+        .cheer-learn b { color: var(--ink); font-weight: 500 }
+        .cheer-next { width: 100%; padding: 14px; font-size: 14px }
+
+        /* completion page */
+        .done-page {
+            position: fixed; inset: 0; z-index: 40; display: none; place-items: center; padding: 24px; overflow: auto;
+            background:
+                radial-gradient(900px 500px at 50% -10%, #2a1e40 0%, transparent 60%),
+                radial-gradient(700px 500px at 50% 120%, #1e2b4a 0%, transparent 55%),
+                #0d0d15
+        }
+        .done-page.show { display: grid }
+        .done-inner { max-width: 560px; text-align: center }
+        .done-mark {
+            width: 78px; height: 78px; margin: 0 auto 20px; border-radius: 50%;
+            display: grid; place-items: center; font-size: 38px; color: #26103a;
+            background: var(--scan); box-shadow: 0 0 0 8px var(--scan-glow), 0 0 50px var(--scan-glow)
+        }
+        @media (prefers-reduced-motion: no-preference) {
+            .done-page.show .done-mark { animation: lock .5s ease }
+        }
+        .done-eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .24em; text-transform: uppercase; color: var(--scan); margin: 0 0 8px }
+        .done-inner h1 { font-size: 38px; letter-spacing: -.02em; margin: 0 0 22px }
+        .done-inner h1 b { color: var(--scan) }
+        .done-stats { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px }
+        .stat { background: var(--bg-panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 20px; min-width: 110px }
+        .stat .num { font-family: var(--mono); font-size: 26px; font-weight: 700; color: var(--ink) }
+        .stat .num.good { color: var(--solved) }
+        .stat .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .12em; margin-top: 3px; font-family: var(--mono) }
+        .done-msg { color: var(--muted); font-size: 15px; margin: 0 auto 26px; max-width: 44ch; line-height: 1.6 }
+        .done-restart { padding: 15px 30px; font-size: 14px }
+        .done-links { margin-top: 18px }
+        .done-links a { font-family: var(--mono); font-size: 12.5px; color: var(--muted) }
+        .done-links a:hover { color: var(--scan) }
+
+        .confetti { position: fixed; top: -10px; width: 9px; height: 14px; opacity: .9; z-index: 41; pointer-events: none }
+        @media (prefers-reduced-motion: no-preference) {
+            .confetti { animation: fall linear forwards }
+            @keyframes fall { to { transform: translateY(110vh) rotate(540deg); opacity: 0 } }
+        }
+
+        /* landing */
+        #landing { display: none; min-height: 100vh; padding: 44px 20px; overflow-y: auto; position: relative }
+        #landing.show { display: flex; align-items: center }
+        #landing::after {
+            content: ""; position: absolute; inset: 0; pointer-events: none;
+            background: repeating-linear-gradient(0deg, transparent 0 3px, #ffffff04 3px 4px);
+            mix-blend-mode: overlay
+        }
+        .land-inner { max-width: 1000px; width: 100%; margin: auto; text-align: center; position: relative; z-index: 1 }
+        .land-eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .26em; text-transform: uppercase; color: var(--scan); margin-bottom: 14px }
+        .land-word { font-family: var(--mono); font-weight: 700; font-size: clamp(42px, 9vw, 74px); letter-spacing: -.03em; line-height: 1; margin: 0 0 12px }
+        .land-word b { color: var(--scan) }
+        .land-tag { font-size: clamp(16px, 2.4vw, 19px); color: var(--muted); margin: 0 auto 24px; max-width: 640px }
+        .land-tag code { font-family: var(--mono); font-size: .86em; color: var(--scan) }
+        .land-what { font-size: 14.5px; color: var(--muted); line-height: 1.7; max-width: 660px; margin: 0 auto 22px }
+        .land-what b { color: var(--ink); font-weight: 500 }
+        .land-what code {
+            font-family: var(--mono); font-size: .9em; background: var(--bg-inset);
+            border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; color: var(--scan)
+        }
+        .demo { background: var(--bg-panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin: 0 auto 26px; max-width: 560px }
+        .demo-code { font-family: var(--mono); font-size: 15px; margin-bottom: 6px; letter-spacing: .01em }
+        .demo-spec { font-family: var(--mono); font-size: 11.5px; color: var(--faint); margin-bottom: 15px }
+        .demo-spec b { color: var(--solved) }
+        .demo-spec s { color: var(--miss); text-decoration: none }
+        .demo-tiles { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap }
+        .demo-card {
+            width: 74px; height: 70px; border-radius: 10px; background: var(--bg-tile);
+            border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center;
+            justify-content: center; gap: 4px; font-size: 10.5px; color: var(--muted); font-family: var(--mono)
+        }
+        .demo-card .em { font-size: 24px; line-height: 1 }
+        .demo-card.hit { outline: 2px solid var(--scan); outline-offset: 2px; box-shadow: 0 0 0 4px var(--scan-glow), 0 0 20px var(--scan-glow) }
+        @media (prefers-reduced-motion: no-preference) {
+            .demo-card.hit { animation: demopulse 2.4s ease-in-out infinite }
+            @keyframes demopulse {
+                0%, 100% { box-shadow: 0 0 0 4px var(--scan-glow), 0 0 18px var(--scan-glow) }
+                50% { box-shadow: 0 0 0 5px var(--scan-glow), 0 0 30px var(--scan-glow) }
+            }
+        }
+        .demo-cap { font-size: 12px; color: var(--faint); margin-top: 14px; font-family: var(--mono); letter-spacing: .02em }
+        .steps { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin: 0 auto 30px; font-family: var(--mono); font-size: 12.5px; color: var(--muted) }
+        .step { display: flex; align-items: center; gap: 8px }
+        .step .n { color: var(--scan); font-weight: 700 }
+        .step .arrow { color: var(--faint) }
+        .cta-row { display: flex; align-items: center; justify-content: center; gap: 22px; flex-wrap: wrap }
+        .enter-btn {
+            font-family: var(--mono); font-weight: 700; font-size: 15px; letter-spacing: .02em;
+            background: var(--scan); color: #26103a; border: 0; border-radius: 10px;
+            padding: 15px 26px; cursor: pointer; transition: .15s; white-space: nowrap
+        }
+        .enter-btn:hover { filter: brightness(1.08) }
+        .enter-btn:active { transform: translateY(1px) }
+        .land-foot { font-family: var(--mono); font-size: 11.5px; color: var(--faint); margin-top: 30px; letter-spacing: .03em }
+        .land-foot a { color: var(--muted); text-decoration: none }
+        .land-foot a:hover { color: var(--scan) }
+        #homeBtn { white-space: nowrap }
+
+        @media (max-width:520px) {
+            .cta-row { flex-direction: column; gap: 18px }
+            .enter-btn { text-align: center }
+            .steps { gap: 9px; flex-direction: column }
+            .step .arrow { display: none }
+        }
+        @media (max-width:720px) {
+            .stage { grid-template-columns: 1fr }
+            .goal-text { font-size: 18px }
+            .logo { font-size: 19px }
+            .run { padding: 11px 14px }
+            #sel { font-size: 14.5px }
+            .eyebrow .lv { margin-left: 0; width: 100%; order: 5 }
+            .done-inner h1 { font-size: 30px }
+        }
+    </style>
+</head>
+
+<body>
+    <section id="landing">
+        <div class="land-inner">
+            <div class="land-eyebrow">CSS selector game · 20 levels · specificity budgets</div>
+            <h1 class="land-word">:<b>where</b>() field</h1>
+            <p class="land-tag">Learn CSS's zero-specificity selector by playing — match the right elements <code>AND</code> stay under the specificity budget.</p>
+
+            <p class="land-what"><b>:where()</b> matches exactly like <code>:is()</code> — same list, same elements — with one superpower: it always counts as <b>zero specificity</b>. Even <code>:where(#id, .class)</code> weighs nothing. That's what makes it the backbone of CSS resets and component libraries: styles that apply everywhere but are trivially easy to override. Every level here gives you a <b>budget</b> like <code>(0,1,0)</code> — ids, classes, types — that your selector must not exceed.</p>
+
+            <div class="demo">
+                <div class="demo-code"><span style="color:var(--scan)">:where(</span><span style="color:var(--info)">tent, cabin</span><span style="color:var(--scan)">)</span></div>
+                <div class="demo-spec">specificity <b>(0,0,0)</b> — while :is(tent, cabin) costs <s>(0,0,1)</s></div>
+                <div class="demo-tiles">
+                    <div class="demo-card hit"><span class="em">⛺</span><span>tent</span></div>
+                    <div class="demo-card"><span class="em">🌲</span><span>tree</span></div>
+                    <div class="demo-card hit"><span class="em">🛖</span><span>cabin</span></div>
+                    <div class="demo-card"><span class="em">🪨</span><span>rock</span></div>
+                </div>
+                <div class="demo-cap">same matches as :is() — zero cost ↑</div>
+            </div>
+
+            <div class="steps">
+                <span class="step"><span class="n">1</span> write a selector</span>
+                <span class="arrow">→</span>
+                <span class="step"><span class="n">2</span> match the set</span>
+                <span class="arrow">→</span>
+                <span class="step"><span class="n">3</span> stay under budget</span>
+            </div>
+
+            <div class="cta-row">
+                <button class="enter-btn" id="enterBtn">Play the game →</button>
+            </div>
+
+            <div class="land-foot" id="landFoot">easy → hard → harder · <a href="index.html">← all labs</a></div>
+        </div>
+    </section>
+
+    <div class="wrap" id="game" style="display:none">
+
+        <header class="top">
+            <div class="brand">
+                <span class="logo">:<b>where</b>() field</span>
+                <span class="tagline">match the set · mind the budget</span>
+            </div>
+            <button class="ref-btn" id="homeBtn">⌂ home</button>
+            <button class="ref-btn" id="refBtn">[ :where() reference ]</button>
+        </header>
+
+        <div class="tiers" id="tiers"></div>
+        <div class="track" id="track"></div>
+
+        <div class="goal-card">
+            <div class="eyebrow">
+                <span class="tt" id="lvTier" data-t="easy">easy</span><span class="sep">·</span>
+                <span class="cc" id="lvTag">group tags</span>
+                <span class="lv" id="lvNum">level 1 / 20</span>
+            </div>
+            <div class="goal-text" id="goal"></div>
+            <div class="budget"><span class="lab">specificity budget</span> ≤ <b id="budgetVal">(0,0,1)</b></div>
+        </div>
+
+        <div class="stage">
+            <div class="panel">
+                <div class="panel-head"><span class="dot"></span>live preview
+                    <span class="live">matched <b id="matchCount">0</b> · spec <b id="specVal">(0,0,0)</b></span>
+                </div>
+                <div class="preview" id="preview"></div>
+            </div>
+            <div class="panel">
+                <div class="panel-head"><span class="dot"></span>markup</div>
+                <pre class="code" id="code"></pre>
+            </div>
+        </div>
+
+        <div class="console">
+            <div class="prompt">
+                <span class="chev">&gt;</span>
+                <input id="sel" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="type a selector using :where() …">
+                <button class="run" id="run">run scan</button>
+            </div>
+            <div class="readout idle" id="readout">
+                <span class="badge-state">idle</span>
+                <span id="readMsg">Write a selector and run it. Match the set and stay under the specificity budget.</span>
+            </div>
+            <div class="hint-bar" id="hint"></div>
+        </div>
+
+        <div class="controls">
+            <button class="ghost" id="hintBtn">hint</button>
+            <button class="ghost" id="revealBtn">reveal answer</button>
+            <div class="spacer"></div>
+            <div class="nav">
+                <button class="ghost" id="prev">◀ prev</button>
+                <button class="ghost next" id="next" disabled>next ▶</button>
+            </div>
+        </div>
+
+        <footer class="foot">20 levels · easy → hard → harder · solve to unlock the next · progress lives in this tab only</footer>
+    </div>
+
+    <!-- reference drawer -->
+    <div class="scrim" id="scrim"></div>
+    <aside class="drawer" id="drawer" aria-hidden="true">
+        <button class="close" id="closeRef">×</button>
+        <h2>the <b>:where()</b> cheat sheet</h2>
+        <p class="sub">:where() matches exactly like :is() but always contributes zero specificity. Specificity is written (ids, classes, types).</p>
+        <div id="refList"></div>
+    </aside>
+
+    <!-- cheer modal -->
+    <div class="modal-scrim" id="cheerScrim">
+        <div class="cheer">
+            <div class="burst">✦</div>
+            <div class="cheer-tier" id="cheerTier">easy · solved</div>
+            <h2 id="cheerTitle">Nailed it!</h2>
+            <code class="cheer-sel" id="cheerSel"></code>
+            <p class="cheer-spec" id="cheerSpec"></p>
+            <p class="cheer-learn" id="cheerLearn"></p>
+            <button class="run cheer-next" id="cheerNext">Next level →</button>
+        </div>
+    </div>
+
+    <!-- completion page -->
+    <div class="done-page" id="donePage">
+        <div class="done-inner">
+            <div class="done-mark">✓</div>
+            <p class="done-eyebrow">all levels cleared</p>
+            <h1>You've mastered <b>:where()</b></h1>
+            <div class="done-stats" id="doneStats"></div>
+            <p class="done-msg" id="doneMsg"></p>
+            <button class="run done-restart" id="restart">Start over ↺</button>
+            <div class="done-links"><a href="index.html">← back to all labs</a></div>
+        </div>
+    </div>
+
+    <script>
+        "use strict";
+
+        /*LEVELS-START*/
+        const LEVELS = [
+            /* ---------------- EASY ---------------- */
+            {
+                tier: "easy", tag: "group tags", budget: [0, 0, 1],
+                goal: "Select all the tents and cabins.",
+                html:
+                    `<tent></tent>
+<cabin></cabin>
+<tree></tree>
+<tent></tent>`,
+                solution: ":where(tent, cabin)",
+                hint: "List both tag names inside the parentheses: <code>:where(tent, cabin)</code>.",
+                learned: "<b>:where(tent, cabin)</b> matches any tent or cabin — exactly like :is() would — but the whole group costs <b>(0,0,0)</b> specificity."
+            },
+            {
+                tier: "easy", tag: "any of these", budget: [0, 0, 1],
+                goal: "Select the trees and rocks.",
+                html:
+                    `<tree></tree>
+<rock></rock>
+<tent></tent>
+<tree></tree>
+<rock></rock>`,
+                solution: ":where(tree, rock)",
+                hint: "Same pattern — two tag names inside <code>:where(…)</code>.",
+                learned: "The list inside <b>:where()</b> is a set of alternatives. An element matches if it fits <b>any</b> selector in the list — and none of it counts toward specificity."
+            },
+            {
+                tier: "easy", tag: "zero cost", budget: [0, 0, 0],
+                goal: "Select the fires and lanterns — with a budget of exactly (0,0,0).",
+                html:
+                    `<fire></fire>
+<lantern></lantern>
+<tree></tree>
+<fire></fire>`,
+                solution: ":where(fire, lantern)",
+                hint: "The budget is zero, so everything must go inside <code>:where(…)</code> — nothing can sit outside it.",
+                learned: "Here's the difference: <b>:is(fire, lantern)</b> costs (0,0,1) — the max of its arguments. <b>:where(fire, lantern)</b> costs (0,0,0), always. Zero-budget levels are :where()'s home turf."
+            },
+            {
+                tier: "easy", tag: "chain a class", budget: [0, 1, 0],
+                goal: "Select the lit lights — fires or lanterns with the class “lit”.",
+                html:
+                    `<fire class="lit"></fire>
+<lantern></lantern>
+<lantern class="lit"></lantern>
+<rock></rock>`,
+                solution: ":where(fire, lantern).lit",
+                hint: "Group the tags with <code>:where()</code>, then chain <code>.lit</code> after it. The class costs (0,1,0); the group costs nothing.",
+                learned: "Conditions chained after <b>:where()</b> DO count. <b>:where(fire, lantern).lit</b> = (0,1,0) — only the .lit is billed. The tag group rides free."
+            },
+            {
+                tier: "easy", tag: "inside a parent", budget: [0, 0, 1],
+                goal: "Select the gear stored inside packs — lanterns or compasses.",
+                html:
+                    `<pack><lantern></lantern></pack>
+<compass></compass>
+<pack><compass></compass></pack>
+<lantern></lantern>`,
+                solution: "pack :where(lantern, compass)",
+                hint: "The budget only covers ONE type selector. Spend it on <code>pack</code> and wrap the gear in <code>:where(…)</code>.",
+                learned: "<b>pack :is(lantern, compass)</b> would cost (0,0,2) — over budget. Moving the group into <b>:where()</b> drops it to (0,0,1): just the pack."
+            },
+            {
+                tier: "easy", tag: "specific parent", budget: [1, 0, 0],
+                goal: "Select everything set up in base camp — the camp with id “base”.",
+                html:
+                    `<camp id="base"><tent></tent><fire></fire></camp>
+<camp><tent></tent></camp>`,
+                solution: "#base :where(tent, fire)",
+                hint: "Spend the budget on <code>#base</code>, then a space, then the zero-cost group <code>:where(tent, fire)</code>.",
+                learned: "The ID costs (1,0,0); the <b>:where()</b> group adds nothing. Budget-wise, <b>#base :where(tent, fire)</b> is identical to a bare <b>#base</b>."
+            },
+            {
+                tier: "easy", tag: "the reset pattern", budget: [0, 0, 0],
+                goal: "Select all the wild things — trees, rocks and fires — at zero specificity, like a CSS reset would.",
+                html:
+                    `<tree></tree>
+<rock></rock>
+<fire></fire>
+<tent></tent>
+<rock></rock>`,
+                solution: ":where(tree, rock, fire)",
+                hint: "A three-item list, all inside <code>:where(…)</code>.",
+                learned: "This is why resets use :where(): <b>:where(ul, ol, menu)</b>-style rules apply everywhere but weigh (0,0,0), so any later rule — however humble — overrides them."
+            },
+
+            /* ---------------- HARD ---------------- */
+            {
+                tier: "hard", tag: "first of type", budget: [0, 1, 0],
+                goal: "Select the first tent and the first cabin — the first of each kind.",
+                html:
+                    `<tent></tent>
+<cabin></cabin>
+<tent></tent>
+<cabin></cabin>
+<tree></tree>`,
+                solution: ":where(tent, cabin):first-of-type",
+                hint: "Chain <code>:first-of-type</code> after the group — the pseudo-class costs (0,1,0), the group costs nothing.",
+                learned: "Pseudo-classes like <b>:first-of-type</b> count as a class — (0,1,0). Wrapping the tags in <b>:where()</b> keeps the total at exactly that."
+            },
+            {
+                tier: "hard", tag: "negation", budget: [0, 1, 0],
+                goal: "Select the unlit lights — fires or lanterns without the class “lit”.",
+                html:
+                    `<fire class="lit"></fire>
+<fire></fire>
+<lantern class="lit"></lantern>
+<lantern></lantern>
+<tree></tree>`,
+                solution: ":where(fire, lantern):not(.lit)",
+                hint: "Group with <code>:where()</code>, then chain <code>:not(.lit)</code>.",
+                learned: "<b>:not()</b> costs the specificity of its argument — .lit is (0,1,0). Unlike :where(), :not() never zeroes anything; it just negates."
+            },
+            {
+                tier: "hard", tag: "direct child", budget: [0, 0, 1],
+                goal: "Select the tents pitched directly in a camp or on a trail — direct children only.",
+                html:
+                    `<camp><tent></tent></camp>
+<trail><tent></tent></trail>
+<camp><pack><tent></tent></pack></camp>`,
+                solution: ":where(camp, trail) > tent",
+                hint: "Wrap the containers in <code>:where()</code>, then <code>&gt; tent</code>. Only the tent should be billed.",
+                learned: "Combinators work around <b>:where()</b> exactly as around :is(). The tent stowed in a pack isn't a <b>direct child</b> of the camp, so it's skipped — and the whole selector costs (0,0,1)."
+            },
+            {
+                tier: "hard", tag: "IDs, zeroed", budget: [0, 0, 1],
+                goal: "Select the trees in camp #north or camp #south — while keeping the WHOLE selector at (0,0,1).",
+                html:
+                    `<camp id="north"><tree></tree></camp>
+<camp id="south"><tree></tree><rock></rock></camp>
+<camp id="east"><tree></tree></camp>`,
+                solution: ":where(#north, #south) tree",
+                hint: "IDs normally cost (1,0,0) each — unless they're inside <code>:where(…)</code>.",
+                learned: "The party trick: <b>:where(#north, #south)</b> contains two IDs yet costs <b>(0,0,0)</b>. Only the bare <b>tree</b> is billed. :is() would charge the full (1,0,1)."
+            },
+            {
+                tier: "hard", tag: "next sibling", budget: [0, 0, 2],
+                goal: "Select the shelter immediately after each fire.",
+                html:
+                    `<fire></fire>
+<tent></tent>
+<cabin></cabin>
+<fire></fire>
+<cabin></cabin>
+<tent></tent>`,
+                solution: "fire + :where(tent, cabin)",
+                hint: "The adjacent-sibling combinator: <code>fire + :where(tent, cabin)</code>.",
+                learned: "<b>+</b> picks only the very next sibling. The selector bills (0,0,1) for <b>fire</b> — the shelter group inside :where() is free. Total: within the (0,0,2) budget with room to spare."
+            },
+            {
+                tier: "hard", tag: "attribute", budget: [0, 1, 0],
+                goal: "Select the big shelters — tents or cabins whose size attribute is “big”.",
+                html:
+                    `<tent size="big"></tent>
+<cabin size="small"></cabin>
+<cabin size="big"></cabin>
+<tent></tent>`,
+                solution: ':where(tent, cabin)[size="big"]',
+                hint: "Chain the attribute selector after the group: <code>:where(tent, cabin)[size=&quot;big&quot;]</code>.",
+                learned: "Attribute selectors cost (0,1,0), same as a class. With the tags wrapped in <b>:where()</b>, the attribute is the only thing on the bill."
+            },
+            {
+                tier: "hard", tag: "double group", budget: [0, 0, 0],
+                goal: "Select the tents or cabins that are new or old — at zero total specificity.",
+                html:
+                    `<tent class="new"></tent>
+<tent></tent>
+<cabin class="old"></cabin>
+<tree class="new"></tree>
+<cabin></cabin>`,
+                solution: ":where(tent, cabin):where(.new, .old)",
+                hint: "TWO <code>:where()</code> back to back — one for tags, one for classes. Both cost nothing.",
+                learned: "Two <b>:where()</b> in a row form an AND of two OR-lists — (tent OR cabin) AND (new OR old) — and the entire thing still weighs <b>(0,0,0)</b>. Classes included."
+            },
+
+            /* ---------------- HARDER ---------------- */
+            {
+                tier: "harder", tag: "both sides", budget: [0, 0, 0],
+                goal: "Select the lights burning inside a camp or on a trail — for free.",
+                html:
+                    `<camp><fire></fire></camp>
+<trail><lantern></lantern></trail>
+<pack><lantern></lantern></pack>
+<fire></fire>
+<camp><lantern></lantern></camp>`,
+                solution: ":where(camp, trail) :where(fire, lantern)",
+                hint: "<code>:where()</code> on both sides of the descendant space. The pack doesn't count.",
+                learned: "A whole two-sided relationship — four selector combinations — at <b>(0,0,0)</b>. This is the library-author pattern: structure without specificity lock-in."
+            },
+            {
+                tier: "harder", tag: "position filter", budget: [0, 1, 0],
+                goal: "Select every tent and cabin except the very first element in the row.",
+                html:
+                    `<tent></tent>
+<cabin></cabin>
+<tent></tent>
+<tree></tree>
+<cabin></cabin>`,
+                solution: ":where(tent, cabin):not(:first-child)",
+                hint: "Filter the group by position: chain <code>:not(:first-child)</code> after <code>:where(…)</code>.",
+                learned: "<b>:not(:first-child)</b> bills (0,1,0) — the pseudo-class inside. The tag group stays free, keeping the total exactly on budget."
+            },
+            {
+                tier: "harder", tag: "nth parent", budget: [0, 1, 1],
+                goal: "Select what's inside the second camp.",
+                html:
+                    `<camp><tent></tent><fire></fire></camp>
+<camp><fire></fire><lantern></lantern></camp>
+<camp><tent></tent></camp>`,
+                solution: "camp:nth-of-type(2) :where(fire, lantern)",
+                hint: "Pin the camp with <code>camp:nth-of-type(2)</code> — (0,1,1) — then the contents ride free in <code>:where()</code>.",
+                learned: "<b>camp</b> is (0,0,1), <b>:nth-of-type(2)</b> is (0,1,0), and the <b>:where()</b> group is 0. Knowing what each piece costs is half the skill."
+            },
+            {
+                tier: "harder", tag: "sibling pairs", budget: [0, 0, 0],
+                goal: "Select the shelters immediately after ANY light — fire or lantern — at zero cost.",
+                html:
+                    `<fire></fire>
+<tent></tent>
+<lantern></lantern>
+<cabin></cabin>
+<tent></tent>
+<fire></fire>
+<tree></tree>`,
+                solution: ":where(fire, lantern) + :where(tent, cabin)",
+                hint: "<code>:where()</code> on both sides of the <code>+</code>.",
+                learned: "Four sibling pairs covered in one selector, total specificity <b>(0,0,0)</b>. The tree after the last fire escapes — it was never in the second list."
+            },
+            {
+                tier: "harder", tag: "child pairs", budget: [0, 0, 0],
+                goal: "Select the shelters that are direct children of a camp or trail — for free.",
+                html:
+                    `<camp><tent></tent><rock></rock></camp>
+<trail><cabin></cabin></trail>
+<camp><pack><cabin></cabin></pack></camp>
+<tent></tent>`,
+                solution: ":where(camp, trail) > :where(tent, cabin)",
+                hint: "<code>:where()</code> on both sides of the child combinator <code>&gt;</code>.",
+                learned: "One selector replacing four — <b>camp &gt; tent, camp &gt; cabin, trail &gt; tent, trail &gt; cabin</b> — and unlike the :is() version, it costs nothing at all."
+            },
+            {
+                tier: "harder", tag: "capstone", budget: [0, 1, 0],
+                goal: "Final ascent — select the open (not closed) shelters directly in a camp or trail, spending at most one class.",
+                html:
+                    `<camp><tent></tent><tent class="closed"></tent></camp>
+<trail><cabin></cabin><rock></rock></trail>
+<cabin></cabin>
+<trail><tent class="closed"></tent></trail>`,
+                solution: ":where(camp, trail) > :where(tent, cabin):not(.closed)",
+                hint: "Stack it all: <code>:where(containers) &gt; :where(shelters):not(.closed)</code>. Only the :not() gets billed.",
+                learned: "The full stack: two free <b>:where()</b> groups, a child combinator, and one billed <b>:not(.closed)</b> — a rich selector at just (0,1,0). That's :where() mastery."
+            }
+        ];
+        /*LEVELS-END*/
+
+        const REF = [
+            [":where(A, B)", "Matches exactly like :is(A, B) — but always costs (0,0,0)."],
+            ["specificity = (ids, classes, types)", "#x is (1,0,0) · .x / [attr] / :pseudo are (0,1,0) · tag is (0,0,1)."],
+            [":is(A, B)", "Costs the specificity of its MOST specific argument."],
+            [":where(#id, .class)", "Still (0,0,0) — :where() zeroes even IDs."],
+            [":where(A, B).x", "Only the .x is billed: (0,1,0). Chained parts outside still count."],
+            [":not(.x)", ":not() is NOT free — it costs its argument: (0,1,0) here."],
+            ["P :where(A, B)", "Bills only P. The grouped part rides free."],
+            [":where(P, Q) > :where(A, B)", "Four child combinations, total cost (0,0,0)."],
+            ["reset pattern", ":where(ul, ol, menu) { … } — global defaults any rule can override."],
+            ["library pattern", "Ship component styles in :where() so users override without !important."],
+            [":where() is forgiving", "One invalid selector in the list is ignored — the rest still work."],
+            ["when to use :is()", "When you WANT the specificity to defend the rule. :where() when you don't."]
+        ];
+
+        const CHEERS = ["Under budget!", "Zero-cost win!", "Selector locked!", "That's the set!", "Weightless!", "Perfectly scoped!", "Free of charge!"];
+
+        // ---------- specificity calculator ----------
+        /*SPEC-START*/
+        function splitTop(s, sep) {
+            const out = []; let d = 0, b = 0, cur = "";
+            for (const ch of s) {
+                if (ch === "(") d++; else if (ch === ")") d--;
+                else if (ch === "[") b++; else if (ch === "]") b--;
+                if (ch === sep && d === 0 && b === 0) { out.push(cur); cur = ""; }
+                else cur += ch;
+            }
+            out.push(cur);
+            return out.filter(x => x.trim() !== "");
+        }
+        function cmpSpec(x, y) {
+            for (let i = 0; i < 3; i++) { if (x[i] !== y[i]) return x[i] - y[i]; }
+            return 0;
+        }
+        function specOne(sel) {
+            let a = 0, b = 0, c = 0, i = 0;
+            const ident = ch => /[-\w]/.test(ch);
+            while (i < sel.length) {
+                const ch = sel[i];
+                if (ch === "#") { a++; i++; while (i < sel.length && ident(sel[i])) i++; }
+                else if (ch === ".") { b++; i++; while (i < sel.length && ident(sel[i])) i++; }
+                else if (ch === "[") { let d = 1; i++; while (i < sel.length && d > 0) { if (sel[i] === "[") d++; if (sel[i] === "]") d--; i++; } b++; }
+                else if (ch === ":") {
+                    let dbl = false; i++;
+                    if (sel[i] === ":") { dbl = true; i++; }
+                    let name = ""; while (i < sel.length && ident(sel[i])) { name += sel[i]; i++; }
+                    let args = null;
+                    if (sel[i] === "(") {
+                        let d = 1, j = i + 1, s = "";
+                        while (j < sel.length && d > 0) { if (sel[j] === "(") d++; if (sel[j] === ")") d--; if (d > 0) s += sel[j]; j++; }
+                        args = s; i = j;
+                    }
+                    name = name.toLowerCase();
+                    if (dbl) { c++; }
+                    else if (name === "where") { /* zero — the whole point */ }
+                    else if (name === "is" || name === "not" || name === "has" || name === "matches") {
+                        if (args) { const s2 = specificity(args); a += s2[0]; b += s2[1]; c += s2[2]; }
+                    }
+                    else { b++; }
+                }
+                else if (/[a-zA-Z]/.test(ch)) { c++; while (i < sel.length && ident(sel[i])) i++; }
+                else i++;
+            }
+            return [a, b, c];
+        }
+        function specificity(selList) {
+            let best = [0, 0, 0];
+            for (const p of splitTop(selList, ",")) {
+                const s = specOne(p.trim());
+                if (cmpSpec(s, best) > 0) best = s;
+            }
+            return best;
+        }
+        function fmtSpec(s) { return "(" + s.join(",") + ")"; }
+        /*SPEC-END*/
+
+        // ---------- state ----------
+        let current = 0;
+        let maxUnlocked = 0;
+        const solved = new Set();
+        const revealed = new Set();
+
+        const STORE_KEY = "whereFieldProgress_v1";
+        let canPersist = false;
+        try { localStorage.setItem("__wf_test", "1"); localStorage.removeItem("__wf_test"); canPersist = true; } catch (e) { }
+
+        const store = {
+            load() { try { const r = localStorage.getItem(STORE_KEY); return r ? JSON.parse(r) : null; } catch (e) { return null; } },
+            save(o) { try { localStorage.setItem(STORE_KEY, JSON.stringify(o)); } catch (e) { } },
+            clear() { try { localStorage.removeItem(STORE_KEY); } catch (e) { } }
+        };
+        function persist() {
+            store.save({ current, maxUnlocked, solved: [...solved], revealed: [...revealed] });
+        }
+        function restoreProgress() {
+            const saved = store.load();
+            if (saved) {
+                maxUnlocked = Math.min(Math.max(saved.maxUnlocked || 0, 0), LEVELS.length - 1);
+                (saved.solved || []).forEach(i => { if (i >= 0 && i < LEVELS.length) solved.add(i); });
+                (saved.revealed || []).forEach(i => { if (i >= 0 && i < LEVELS.length) revealed.add(i); });
+                current = Math.min(Math.max(saved.current || 0, 0), maxUnlocked);
+            }
+            document.querySelector(".foot").textContent = canPersist
+                ? "20 levels · easy → hard → harder · solve to unlock the next · progress is saved in this browser"
+                : "20 levels · easy → hard → harder · solve to unlock the next · progress lives in this tab only";
+        }
+
+        const $ = id => document.getElementById(id);
+        const preview = $("preview"), code = $("code"), sel = $("sel");
+        const readout = $("readout"), readMsg = $("readMsg"), matchCount = $("matchCount"), track = $("track");
+        const specVal = $("specVal");
+        const nextBtn = $("next"), prevBtn = $("prev");
+        const isLast = () => current === LEVELS.length - 1;
+
+        // ---------- markup highlighter ----------
+        function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+        function hlTag(tag) {
+            let s = esc(tag);
+            s = s.replace(/^(&lt;\/?)([\w-]+)/, '<span class="t-punc">$1</span><span class="t-tag">$2</span>');
+            s = s.replace(/(\/?&gt;)$/, '<span class="t-punc">$1</span>');
+            s = s.replace(/([\w-]+)=(&quot;[^&]*&quot;)/g, '<span class="t-attr">$1</span><span class="t-punc">=</span><span class="t-str">$2</span>');
+            return s;
+        }
+        function highlight(raw) {
+            let out = "", i = 0;
+            while (i < raw.length) {
+                if (raw[i] === "<") { let j = raw.indexOf(">", i); if (j === -1) j = raw.length - 1; out += hlTag(raw.slice(i, j + 1)); i = j + 1; }
+                else { let j = raw.indexOf("<", i); if (j === -1) j = raw.length; out += '<span class="t-text">' + esc(raw.slice(i, j)) + '</span>'; i = j; }
+            }
+            return out;
+        }
+
+        // ---------- specimen labels ----------
+        function sig(el) {
+            let s = el.tagName.toLowerCase();
+            if (el.id) s += "#" + el.id;
+            if (el.className) s += "." + String(el.className).trim().split(/\s+/).join(".");
+            for (const a of el.attributes) {
+                if (a.name !== "id" && a.name !== "class" && a.name !== "data-sig") s += `[${a.name}=${a.value}]`;
+            }
+            return s;
+        }
+        function annotate() {
+            preview.querySelectorAll("*").forEach(el => el.setAttribute("data-sig", sig(el)));
+        }
+
+        // ---------- helpers ----------
+        function clearMarks() { preview.querySelectorAll(".scan-hit,.scan-miss,.scan-solved").forEach(el => el.classList.remove("scan-hit", "scan-miss", "scan-solved")); }
+        function expectedSet() { return [...preview.querySelectorAll(LEVELS[current].solution)]; }
+        function tierLabel(t) { return t === "easy" ? "Easy" : t === "hard" ? "Hard" : "Harder"; }
+
+        function renderTiers() {
+            const order = ["easy", "hard", "harder"];
+            const cur = LEVELS[current].tier;
+            const counts = {}; order.forEach(t => counts[t] = LEVELS.filter(l => l.tier === t).length);
+            $("tiers").innerHTML = order.map(t =>
+                `<span class="tier-pill ${t === cur ? "on" : ""}" data-t="${t}">${tierLabel(t)} · ${counts[t]}</span>`).join("");
+        }
+        function renderTrack() {
+            track.innerHTML = "";
+            LEVELS.forEach((lv, i) => {
+                const s = document.createElement("div");
+                let cls = "seg";
+                if (solved.has(i)) cls += " done";
+                if (revealed.has(i)) cls += " revealed";
+                if (i === current) cls += " here";
+                if (i > maxUnlocked) cls += " locked";
+                s.className = cls;
+                s.dataset.tier = lv.tier;
+                s.title = (i > maxUnlocked ? "Locked — " : "Level ") + (i + 1) + " · " + tierLabel(lv.tier);
+                s.onclick = () => { if (i <= maxUnlocked) { current = i; loadLevel(); } };
+                track.appendChild(s);
+            });
+        }
+        function updateNav() {
+            nextBtn.disabled = !solved.has(current);
+            nextBtn.textContent = isLast() ? "finish ▶" : "next ▶";
+            prevBtn.disabled = current === 0;
+        }
+        function setReadout(state, msg) {
+            readout.className = "readout " + state;
+            readout.querySelector(".badge-state").textContent = state;
+            readMsg.textContent = msg;
+        }
+
+        function loadLevel() {
+            closeCheer(); $("donePage").classList.remove("show");
+            const lv = LEVELS[current];
+            const tt = $("lvTier"); tt.textContent = tierLabel(lv.tier).toLowerCase(); tt.dataset.t = lv.tier;
+            $("lvTag").textContent = lv.tag;
+            $("lvNum").textContent = "level " + (current + 1) + " / " + LEVELS.length;
+            $("goal").textContent = lv.goal;
+            $("budgetVal").textContent = fmtSpec(lv.budget);
+            preview.innerHTML = lv.html;
+            annotate();
+            code.innerHTML = highlight(lv.html);
+            sel.value = ""; matchCount.textContent = "0";
+            specVal.textContent = "(0,0,0)"; specVal.className = "";
+            $("hint").className = "hint-bar"; $("hint").innerHTML = "";
+            setReadout("idle", "Write a selector and run it. Match the set and stay under the specificity budget.");
+            renderTiers(); renderTrack(); updateNav(); persist();
+            sel.focus();
+        }
+
+        // live match + live specificity while typing
+        function liveScan() {
+            clearMarks();
+            const q = sel.value.trim();
+            if (!q) { matchCount.textContent = "0"; specVal.textContent = "(0,0,0)"; specVal.className = ""; return; }
+            const sp = specificity(q);
+            specVal.textContent = fmtSpec(sp);
+            specVal.className = cmpSpec(sp, LEVELS[current].budget) > 0 ? "over" : "";
+            let hits;
+            try { hits = [...preview.querySelectorAll(q)]; } catch (e) { matchCount.textContent = "—"; return; }
+            hits.forEach(el => el.classList.add("scan-hit"));
+            matchCount.textContent = hits.length;
+        }
+
+        function markSolved(viaReveal) {
+            solved.add(current);
+            if (viaReveal) revealed.add(current);
+            if (current === maxUnlocked && current < LEVELS.length - 1) maxUnlocked = current + 1;
+            renderTrack(); updateNav(); persist();
+        }
+
+        // grade (Run scan / Enter)
+        function runScan() {
+            const q = sel.value.trim();
+            clearMarks();
+            if (!q) { setReadout("idle", "Nothing to scan yet — type a selector first."); matchCount.textContent = "0"; return; }
+            let hits;
+            try { hits = [...preview.querySelectorAll(q)]; } catch (e) { setReadout("err", "That selector won't parse. Check your brackets and commas."); matchCount.textContent = "—"; return; }
+            matchCount.textContent = hits.length;
+
+            if (!/:where\(/i.test(q)) { hits.forEach(el => el.classList.add("scan-hit")); setReadout("warn", "Use :where() — that's the whole point of this field."); return; }
+
+            const exp = expectedSet();
+            const missing = exp.filter(e => !hits.includes(e));
+            const extra = hits.filter(e => !exp.includes(e));
+            const sp = specificity(q);
+            const overBudget = cmpSpec(sp, LEVELS[current].budget) > 0;
+
+            if (missing.length === 0 && extra.length === 0 && !overBudget) {
+                hits.forEach(el => el.classList.add("scan-solved"));
+                const n = hits.length;
+                setReadout("ok", "Solved — " + n + " element" + (n === 1 ? "" : "s") + " at specificity " + fmtSpec(sp) + ", within budget " + fmtSpec(LEVELS[current].budget) + ".");
+                markSolved(false);
+                if (isLast()) { setTimeout(showCompletion, 550); }
+                else { setTimeout(showCheer, 450); }
+                return;
+            }
+
+            if (missing.length === 0 && extra.length === 0 && overBudget) {
+                hits.forEach(el => el.classList.add("scan-hit"));
+                setReadout("warn", "Right set — but specificity " + fmtSpec(sp) + " blows the budget " + fmtSpec(LEVELS[current].budget) + ". Move more of it inside :where().");
+                return;
+            }
+
+            hits.forEach(el => el.classList.add(exp.includes(el) ? "scan-hit" : "scan-miss"));
+            let msg;
+            if (extra.length > 0 && missing.length === 0) msg = "Close — " + extra.length + " of these shouldn't be caught (coral). Tighten the selector.";
+            else if (missing.length > 0 && extra.length === 0) msg = hits.length + " matched, but " + missing.length + " more fit the goal. Widen your reach.";
+            else msg = "Not the right set — " + extra.length + " wrongly caught (coral), and some targets are still missing.";
+            setReadout("err", msg);
+        }
+
+        // ---------- cheer modal ----------
+        function showCheer() {
+            const lv = LEVELS[current];
+            $("cheerTier").textContent = tierLabel(lv.tier).toLowerCase() + " · solved";
+            $("cheerTitle").textContent = CHEERS[Math.floor(Math.random() * CHEERS.length)];
+            $("cheerSel").textContent = lv.solution;
+            $("cheerSpec").innerHTML = "specificity <b>" + fmtSpec(specificity(lv.solution)) + "</b> · budget " + fmtSpec(lv.budget);
+            $("cheerLearn").innerHTML = lv.learned;
+            $("cheerNext").textContent = (current + 1 < LEVELS.length && LEVELS[current + 1].tier !== lv.tier)
+                ? "Next level → " + tierLabel(LEVELS[current + 1].tier) : "Next level →";
+            $("cheerScrim").classList.add("show");
+            $("cheerNext").focus();
+        }
+        function closeCheer() { $("cheerScrim").classList.remove("show"); }
+        function goNext() {
+            closeCheer();
+            if (!isLast()) { current++; loadLevel(); }
+            else showCompletion();
+        }
+
+        // ---------- completion ----------
+        function fireConfetti() {
+            const cols = ["#c084fc", "#f5b54b", "#8aa2f5", "#4ade80", "#2dd4bf"];
+            for (let i = 0; i < 70; i++) {
+                const c = document.createElement("div");
+                c.className = "confetti";
+                c.style.left = Math.random() * 100 + "vw";
+                c.style.background = cols[i % cols.length];
+                c.style.animationDuration = (2.6 + Math.random() * 2.4) + "s";
+                c.style.animationDelay = (Math.random() * 0.6) + "s";
+                c.style.transform = "rotate(" + (Math.random() * 360) + "deg)";
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 5600);
+            }
+        }
+        function showCompletion() {
+            closeCheer();
+            const total = LEVELS.length, clean = total - revealed.size;
+            $("doneStats").innerHTML =
+                `<div class="stat"><div class="num">${total}</div><div class="lbl">levels cleared</div></div>
+     <div class="stat"><div class="num good">${clean}</div><div class="lbl">solved solo</div></div>
+     <div class="stat"><div class="num">${revealed.size}</div><div class="lbl">revealed</div></div>`;
+            $("doneMsg").textContent = revealed.size === 0
+                ? "A perfect run — every selector matched and every budget met, all on your own. You've got :where() cold."
+                : "Solid work across all three tiers. Restart and try for a clean run with zero reveals.";
+            $("donePage").classList.add("show");
+            $("restart").focus();
+            fireConfetti();
+        }
+        function restart() {
+            current = 0; maxUnlocked = 0; solved.clear(); revealed.clear();
+            store.clear();
+            $("donePage").classList.remove("show");
+            loadLevel();
+        }
+
+        // ---------- reference ----------
+        function buildRef() {
+            $("refList").innerHTML = REF.map(([c, d]) => `<div class="ref-row"><code>${esc(c)}</code><span>${d}</span></div>`).join("");
+        }
+        function openRef(o) { $("drawer").classList.toggle("show", o); $("scrim").classList.toggle("show", o); $("drawer").setAttribute("aria-hidden", String(!o)); }
+
+        // ---------- landing ----------
+        function showLanding() { $("landing").classList.add("show"); $("game").style.display = "none"; window.scrollTo(0, 0); }
+        function enterGame() {
+            if (solved.size === LEVELS.length) current = 0;
+            $("landing").classList.remove("show"); $("game").style.display = ""; loadLevel(); window.scrollTo(0, 0);
+        }
+
+        // ---------- wire up ----------
+        $("run").onclick = runScan;
+        sel.addEventListener("input", liveScan);
+        sel.addEventListener("keydown", e => { if (e.key === "Enter") runScan(); });
+        nextBtn.onclick = goNext;
+        prevBtn.onclick = () => { if (current > 0) { current--; loadLevel(); } };
+        $("hintBtn").onclick = () => { const h = $("hint"); if (h.classList.contains("show")) h.classList.remove("show"); else { h.innerHTML = LEVELS[current].hint; h.classList.add("show"); } };
+        $("revealBtn").onclick = () => {
+            sel.value = LEVELS[current].solution; liveScan();
+            clearMarks(); expectedSet().forEach(el => el.classList.add("scan-solved"));
+            markSolved(true);
+            setReadout("warn", "Revealed one correct answer — level unlocked. Note its specificity: " + fmtSpec(specificity(LEVELS[current].solution)) + ".");
+        };
+        $("refBtn").onclick = () => openRef(true);
+        $("closeRef").onclick = () => openRef(false);
+        $("scrim").onclick = () => openRef(false);
+        $("cheerNext").onclick = goNext;
+        $("restart").onclick = restart;
+        $("enterBtn").onclick = enterGame;
+        $("homeBtn").onclick = showLanding;
+        document.addEventListener("keydown", e => {
+            if (e.key === "Escape") { openRef(false); closeCheer(); }
+            if (e.key === "Enter" && $("cheerScrim").classList.contains("show")) { goNext(); }
+            if (e.key === "Enter" && $("landing").classList.contains("show")) { enterGame(); }
+        });
+
+        buildRef();
+        restoreProgress();
+        showLanding();
+    </script>
+</body>
+
+</html>

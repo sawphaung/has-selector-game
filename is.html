@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>:is() garden — practice the CSS grouping selector</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #14141d;
+            --bg-panel: #1c1c29;
+            --bg-inset: #101018;
+            --bg-tile: #232333;
+            --line: #2f2f43;
+            --ink: #ebebf4;
+            --muted: #8a8aa4;
+            --faint: #5b5b74;
+            --scan: #8aa2f5;                 /* accent — periwinkle for :is() */
+            --scan-glow: #8aa2f566;
+            --goal: #f5b54b;                 /* hard */
+            --adv: #c084fc;                  /* harder */
+            --easyc: #2dd4bf;                /* easy */
+            --miss: #f4708a;
+            --info: #2dd4bf;
+            --solved: #4ade80;
+            --mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+            --disp: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+        }
+
+        * { box-sizing: border-box }
+        html, body { margin: 0 }
+
+        body {
+            background:
+                radial-gradient(1100px 600px at 80% -10%, #1d2a40 0%, transparent 55%),
+                radial-gradient(900px 500px at -5% 110%, #1d3324 0%, transparent 50%),
+                var(--bg);
+            color: var(--ink);
+            font-family: var(--disp);
+            line-height: 1.5;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .wrap { max-width: 1080px; margin: 0 auto; padding: 22px 20px 60px }
+
+        /* header */
+        header.top {
+            display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+            padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid var(--line)
+        }
+        .brand { display: flex; align-items: baseline; gap: 12px; flex: 1; min-width: 230px }
+        .logo { font-family: var(--mono); font-weight: 700; font-size: 22px; letter-spacing: -.5px }
+        .logo b { color: var(--scan) }
+        .tagline { color: var(--muted); font-size: 13px }
+        .ref-btn {
+            font-family: var(--mono); font-size: 12.5px; color: var(--muted);
+            background: transparent; border: 1px solid var(--line); border-radius: 8px;
+            padding: 8px 13px; cursor: pointer; transition: .15s; letter-spacing: .03em
+        }
+        .ref-btn:hover { color: var(--ink); border-color: var(--scan) }
+
+        /* tier legend */
+        .tiers { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap }
+        .tier-pill {
+            font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+            padding: 5px 11px; border-radius: 20px; border: 1px solid var(--line);
+            color: var(--faint); background: var(--bg-panel)
+        }
+        .tier-pill.on[data-t="easy"] { color: var(--easyc); border-color: #2a4a45; box-shadow: 0 0 12px #2dd4bf44 }
+        .tier-pill.on[data-t="hard"] { color: var(--goal); border-color: #4a3f22; box-shadow: 0 0 12px #f5b54b44 }
+        .tier-pill.on[data-t="harder"] { color: var(--adv); border-color: #3f2a4a; box-shadow: 0 0 12px #c084fc44 }
+
+        /* progress track */
+        .track { display: flex; gap: 5px; margin-bottom: 22px; flex-wrap: wrap }
+        .seg {
+            height: 8px; flex: 1; min-width: 14px; border-radius: 4px;
+            background: var(--bg-tile); border: 1px solid var(--line); cursor: pointer; transition: .18s
+        }
+        .seg:hover { transform: translateY(-2px) }
+        .seg[data-tier="easy"] { border-color: #2a4a45 }
+        .seg[data-tier="hard"] { border-color: #4a3f22 }
+        .seg[data-tier="harder"] { border-color: #3f2a4a }
+        .seg.done { background: var(--easyc); border-color: var(--easyc); box-shadow: 0 0 10px #2dd4bf55 }
+        .seg.done[data-tier="hard"] { background: var(--goal); border-color: var(--goal); box-shadow: 0 0 10px #f5b54b55 }
+        .seg.done[data-tier="harder"] { background: var(--adv); border-color: var(--adv); box-shadow: 0 0 10px #c084fc55 }
+        .seg.revealed { background: var(--faint) !important; border-color: var(--faint) !important; box-shadow: none !important }
+        .seg.here { outline: 2px solid var(--scan); outline-offset: 2px }
+        .seg.locked { opacity: .3; cursor: not-allowed }
+        .seg.locked:hover { transform: none }
+
+        /* goal */
+        .goal-card { margin-bottom: 18px }
+        .eyebrow {
+            font-family: var(--mono); font-size: 11.5px; letter-spacing: .2em; text-transform: uppercase;
+            display: flex; gap: 10px; align-items: center; margin-bottom: 9px
+        }
+        .eyebrow .tt[data-t="easy"] { color: var(--easyc) }
+        .eyebrow .tt[data-t="hard"] { color: var(--goal) }
+        .eyebrow .tt[data-t="harder"] { color: var(--adv) }
+        .eyebrow .sep { color: var(--faint) }
+        .eyebrow .cc { color: var(--muted) }
+        .eyebrow .lv { color: var(--faint); margin-left: auto }
+        .goal-text { font-size: 20px; font-weight: 500; letter-spacing: -.01em; max-width: 62ch }
+        .goal-text code {
+            font-family: var(--mono); font-size: .86em; background: var(--bg-inset);
+            padding: 1px 6px; border-radius: 5px; color: var(--info); border: 1px solid var(--line)
+        }
+
+        /* panels */
+        .stage { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px }
+        .panel {
+            background: var(--bg-panel); border: 1px solid var(--line); border-radius: 14px;
+            overflow: hidden; display: flex; flex-direction: column; min-height: 230px
+        }
+        .panel-head {
+            display: flex; align-items: center; gap: 8px; padding: 11px 15px;
+            border-bottom: 1px solid var(--line); font-family: var(--mono); font-size: 11px;
+            letter-spacing: .16em; text-transform: uppercase; color: var(--faint)
+        }
+        .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--faint) }
+        .panel-head .live { margin-left: auto; color: var(--muted); text-transform: none; letter-spacing: .02em; font-size: 11.5px }
+        .panel-head .live b { color: var(--scan) }
+
+        .preview {
+            padding: 18px; display: flex; flex-wrap: wrap; gap: 12px;
+            align-content: flex-start; align-items: flex-end; flex: 1; position: relative
+        }
+        .preview::after {
+            content: ""; position: absolute; inset: 0; pointer-events: none;
+            background: repeating-linear-gradient(0deg, transparent 0 3px, #ffffff05 3px 4px);
+            mix-blend-mode: overlay
+        }
+
+        .code {
+            flex: 1; margin: 0; padding: 16px; overflow: auto; background: var(--bg-inset);
+            font-family: var(--mono); font-size: 12.5px; line-height: 1.75; white-space: pre; color: #c9c9de
+        }
+        .t-punc { color: #5b5b74 }
+        .t-tag { color: #8aa2f5 }
+        .t-attr { color: #2dd4bf }
+        .t-str { color: #f5b54b }
+        .t-text { color: #d6d6e4 }
+
+        /* ---- garden specimens (custom tags) ---- */
+        .preview rose, .preview tulip, .preview daisy, .preview sunflower, .preview mushroom,
+        .preview tree, .preview pine, .preview sprout, .preview bee, .preview butterfly {
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+            background: var(--bg-tile); border: 1px solid var(--line); border-radius: 11px;
+            padding: 11px 12px 8px; min-width: 66px; transition: .2s; position: relative
+        }
+        .preview rose::before { content: "🌹" } .preview tulip::before { content: "🌷" }
+        .preview daisy::before { content: "🌼" } .preview sunflower::before { content: "🌻" }
+        .preview mushroom::before { content: "🍄" } .preview tree::before { content: "🌳" }
+        .preview pine::before { content: "🌲" } .preview sprout::before { content: "🌱" }
+        .preview bee::before { content: "🐝" } .preview butterfly::before { content: "🦋" }
+        .preview rose.wilted::before { content: "🥀" }
+        .preview rose::before, .preview tulip::before, .preview daisy::before, .preview sunflower::before,
+        .preview mushroom::before, .preview tree::before, .preview pine::before, .preview sprout::before,
+        .preview bee::before, .preview butterfly::before { font-size: 26px; line-height: 1 }
+
+        /* signature label under each specimen */
+        .preview rose::after, .preview tulip::after, .preview daisy::after, .preview sunflower::after,
+        .preview mushroom::after, .preview tree::after, .preview pine::after, .preview sprout::after,
+        .preview bee::after, .preview butterfly::after {
+            content: attr(data-sig); font-family: var(--mono); font-size: 9.5px;
+            color: var(--muted); letter-spacing: .02em; max-width: 110px;
+            text-align: center; word-break: break-all
+        }
+
+        /* class / attribute decorations */
+        .preview .red::before { filter: drop-shadow(0 0 7px #f4708acc) }
+        .preview .blue::before { filter: drop-shadow(0 0 7px #8aa2f5cc) }
+        .preview .pink::before { filter: drop-shadow(0 0 7px #f0a3ffcc) }
+        .preview [color="red"]::before { filter: drop-shadow(0 0 7px #f4708acc) }
+        .preview [color="yellow"]::before { filter: drop-shadow(0 0 7px #f5b54bcc) }
+        .preview .wilted { opacity: .7 }
+
+        /* containers */
+        .preview pot, .preview basket, .preview tray {
+            display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px;
+            background: var(--bg-inset); border: 1px dashed var(--line); border-radius: 11px;
+            padding: 30px 10px 10px; position: relative; min-width: 84px; min-height: 74px; transition: .2s
+        }
+        .preview pot::before, .preview basket::before, .preview tray::before {
+            position: absolute; top: 7px; left: 10px; font-family: var(--mono);
+            font-size: 10px; color: var(--faint); letter-spacing: .04em
+        }
+        .preview pot::before { content: "🪴 " attr(data-sig) }
+        .preview basket::before { content: "🧺 " attr(data-sig) }
+        .preview tray::before { content: "▦ " attr(data-sig) }
+
+        /* match states */
+        .preview .scan-hit {
+            outline: 2px solid var(--scan); outline-offset: 2px;
+            box-shadow: 0 0 0 4px var(--scan-glow), 0 0 22px var(--scan-glow); border-radius: 8px
+        }
+        .preview .scan-miss {
+            outline: 2px solid var(--miss); outline-offset: 2px;
+            box-shadow: 0 0 0 4px #f4708a44; border-radius: 8px
+        }
+        .preview .scan-solved {
+            outline: 2px solid var(--solved); outline-offset: 2px;
+            box-shadow: 0 0 0 4px #4ade8044, 0 0 22px #4ade8055; border-radius: 8px
+        }
+
+        @media (prefers-reduced-motion: no-preference) {
+            .preview .scan-hit { animation: pop .22s ease }
+            .preview .scan-solved { animation: lock .35s ease }
+            @keyframes pop { from { transform: scale(.94) } to { transform: scale(1) } }
+            @keyframes lock { 0% { transform: scale(1) } 40% { transform: scale(1.06) } 100% { transform: scale(1) } }
+        }
+
+        /* console */
+        .console { background: var(--bg-panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 14px }
+        .prompt {
+            display: flex; align-items: center; gap: 10px; background: var(--bg-inset);
+            border: 1px solid var(--line); border-radius: 10px; padding: 4px 6px 4px 14px; transition: .15s
+        }
+        .prompt:focus-within { border-color: var(--scan); box-shadow: 0 0 0 3px var(--scan-glow) }
+        .chev { font-family: var(--mono); color: var(--scan); font-weight: 700 }
+        #sel {
+            flex: 1; background: transparent; border: 0; outline: 0; color: var(--ink);
+            font-family: var(--mono); font-size: 15.5px; padding: 12px 0
+        }
+        #sel::placeholder { color: var(--faint) }
+        .run {
+            font-family: var(--mono); font-weight: 700; font-size: 13px; letter-spacing: .06em;
+            background: var(--scan); color: #0b1230; border: 0; border-radius: 8px;
+            padding: 11px 18px; cursor: pointer; transition: .15s; text-transform: uppercase; white-space: nowrap
+        }
+        .run:hover { filter: brightness(1.08) }
+        .run:active { transform: translateY(1px) }
+
+        .readout { margin-top: 12px; font-size: 14px; min-height: 22px; color: var(--muted); display: flex; gap: 9px; align-items: flex-start }
+        .readout .badge-state {
+            font-family: var(--mono); font-size: 11px; padding: 2px 8px; border-radius: 5px;
+            text-transform: uppercase; letter-spacing: .08em; flex-shrink: 0; margin-top: 1px
+        }
+        .readout.ok { color: var(--ink) }
+        .readout.ok .badge-state { background: #123a2e; color: var(--solved) }
+        .readout.warn .badge-state { background: #3a2e12; color: var(--goal) }
+        .readout.err .badge-state { background: #3a1a24; color: var(--miss) }
+        .readout.idle .badge-state { background: var(--bg-tile); color: var(--faint) }
+
+        /* controls */
+        .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap }
+        .ghost {
+            font-family: var(--mono); font-size: 12.5px; color: var(--muted); letter-spacing: .03em;
+            background: transparent; border: 1px solid var(--line); border-radius: 8px;
+            padding: 10px 15px; cursor: pointer; transition: .15s
+        }
+        .ghost:hover { color: var(--ink); border-color: var(--muted) }
+        .ghost:disabled { opacity: .35; cursor: not-allowed }
+        .spacer { flex: 1 }
+        .nav { display: flex; gap: 8px }
+        .nav .ghost.next:not(:disabled) { border-color: var(--scan); color: var(--scan) }
+
+        .hint-bar {
+            margin-top: 12px; font-size: 13.5px; color: var(--muted); background: var(--bg-inset);
+            border: 1px dashed var(--line); border-radius: 9px; padding: 11px 14px; display: none
+        }
+        .hint-bar.show { display: block }
+        .hint-bar code { font-family: var(--mono); color: var(--goal) }
+
+        footer.foot { margin-top: 26px; color: var(--faint); font-size: 12px; text-align: center; font-family: var(--mono); letter-spacing: .03em }
+
+        /* reference drawer */
+        .scrim {
+            position: fixed; inset: 0; background: #0009; backdrop-filter: blur(2px);
+            opacity: 0; pointer-events: none; transition: .2s; z-index: 20
+        }
+        .scrim.show { opacity: 1; pointer-events: auto }
+        .drawer {
+            position: fixed; top: 0; right: 0; height: 100%; width: min(460px, 92vw); z-index: 21;
+            background: var(--bg-panel); border-left: 1px solid var(--line);
+            transform: translateX(100%); transition: transform .25s ease; overflow-y: auto; padding: 22px
+        }
+        .drawer.show { transform: none }
+        .drawer h2 { font-size: 16px; margin: 0 0 4px; font-family: var(--mono) }
+        .drawer h2 b { color: var(--scan) }
+        .drawer p.sub { color: var(--muted); font-size: 13px; margin: 0 0 18px }
+        .drawer .close {
+            position: absolute; top: 18px; right: 18px; background: transparent;
+            border: 1px solid var(--line); color: var(--muted); border-radius: 7px;
+            width: 30px; height: 30px; cursor: pointer; font-size: 15px
+        }
+        .drawer .close:hover { color: var(--ink); border-color: var(--scan) }
+        .ref-row { padding: 12px 0; border-top: 1px solid var(--line) }
+        .ref-row code { font-family: var(--mono); font-size: 13.5px; color: var(--scan); display: block; margin-bottom: 4px }
+        .ref-row span { font-size: 13px; color: var(--muted) }
+
+        /* cheer modal */
+        .modal-scrim {
+            position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 20px;
+            background: #0b0b12cc; backdrop-filter: blur(4px); opacity: 0; pointer-events: none; transition: .2s
+        }
+        .modal-scrim.show { opacity: 1; pointer-events: auto }
+        .cheer {
+            background: var(--bg-panel); border: 1px solid var(--line); border-radius: 18px;
+            padding: 34px 30px; max-width: 440px; width: 100%; text-align: center; position: relative;
+            transform: scale(.94); transition: transform .22s ease; box-shadow: 0 24px 70px #0008
+        }
+        .modal-scrim.show .cheer { transform: scale(1) }
+        .burst { font-size: 34px; color: var(--scan); margin-bottom: 8px }
+        @media (prefers-reduced-motion: no-preference) {
+            .modal-scrim.show .burst { animation: spin .7s ease }
+            @keyframes spin { from { transform: rotate(-40deg) scale(.4); opacity: 0 } to { transform: none; opacity: 1 } }
+        }
+        .cheer-tier { font-family: var(--mono); font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--solved); margin-bottom: 6px }
+        .cheer h2 { margin: 0 0 14px; font-size: 26px; letter-spacing: -.02em }
+        .cheer-sel {
+            display: inline-block; font-family: var(--mono); font-size: 14px; color: var(--scan);
+            background: var(--bg-inset); border: 1px solid var(--line); border-radius: 8px;
+            padding: 8px 12px; margin-bottom: 14px; word-break: break-all
+        }
+        .cheer-learn { font-size: 13.5px; color: var(--muted); margin: 0 0 22px; line-height: 1.6 }
+        .cheer-learn b { color: var(--ink); font-weight: 500 }
+        .cheer-next { width: 100%; padding: 14px; font-size: 14px }
+
+        /* completion page */
+        .done-page {
+            position: fixed; inset: 0; z-index: 40; display: none; place-items: center; padding: 24px; overflow: auto;
+            background:
+                radial-gradient(900px 500px at 50% -10%, #1e2b4a 0%, transparent 60%),
+                radial-gradient(700px 500px at 50% 120%, #1e3a28 0%, transparent 55%),
+                #0d0d15
+        }
+        .done-page.show { display: grid }
+        .done-inner { max-width: 560px; text-align: center }
+        .done-mark {
+            width: 78px; height: 78px; margin: 0 auto 20px; border-radius: 50%;
+            display: grid; place-items: center; font-size: 38px; color: #0b1230;
+            background: var(--scan); box-shadow: 0 0 0 8px var(--scan-glow), 0 0 50px var(--scan-glow)
+        }
+        @media (prefers-reduced-motion: no-preference) {
+            .done-page.show .done-mark { animation: lock .5s ease }
+        }
+        .done-eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .24em; text-transform: uppercase; color: var(--scan); margin: 0 0 8px }
+        .done-inner h1 { font-size: 38px; letter-spacing: -.02em; margin: 0 0 22px }
+        .done-inner h1 b { color: var(--scan) }
+        .done-stats { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px }
+        .stat { background: var(--bg-panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 20px; min-width: 110px }
+        .stat .num { font-family: var(--mono); font-size: 26px; font-weight: 700; color: var(--ink) }
+        .stat .num.good { color: var(--solved) }
+        .stat .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .12em; margin-top: 3px; font-family: var(--mono) }
+        .done-msg { color: var(--muted); font-size: 15px; margin: 0 auto 26px; max-width: 44ch; line-height: 1.6 }
+        .done-restart { padding: 15px 30px; font-size: 14px }
+        .done-links { margin-top: 18px }
+        .done-links a { font-family: var(--mono); font-size: 12.5px; color: var(--muted) }
+        .done-links a:hover { color: var(--scan) }
+
+        .confetti { position: fixed; top: -10px; width: 9px; height: 14px; opacity: .9; z-index: 41; pointer-events: none }
+        @media (prefers-reduced-motion: no-preference) {
+            .confetti { animation: fall linear forwards }
+            @keyframes fall { to { transform: translateY(110vh) rotate(540deg); opacity: 0 } }
+        }
+
+        /* ---------- landing ---------- */
+        #landing { display: none; min-height: 100vh; padding: 44px 20px; overflow-y: auto; position: relative }
+        #landing.show { display: flex; align-items: center }
+        #landing::after {
+            content: ""; position: absolute; inset: 0; pointer-events: none;
+            background: repeating-linear-gradient(0deg, transparent 0 3px, #ffffff04 3px 4px);
+            mix-blend-mode: overlay
+        }
+        .land-inner { max-width: 1000px; width: 100%; margin: auto; text-align: center; position: relative; z-index: 1 }
+        .land-eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .26em; text-transform: uppercase; color: var(--scan); margin-bottom: 14px }
+        .land-word { font-family: var(--mono); font-weight: 700; font-size: clamp(42px, 9vw, 74px); letter-spacing: -.03em; line-height: 1; margin: 0 0 12px }
+        .land-word b { color: var(--scan) }
+        .land-tag { font-size: clamp(16px, 2.4vw, 19px); color: var(--muted); margin: 0 auto 24px; max-width: 640px }
+        .land-tag code { font-family: var(--mono); font-size: .86em; color: var(--scan) }
+        .land-what { font-size: 14.5px; color: var(--muted); line-height: 1.7; max-width: 640px; margin: 0 auto 22px }
+        .land-what b { color: var(--ink); font-weight: 500 }
+        .land-what code {
+            font-family: var(--mono); font-size: .9em; background: var(--bg-inset);
+            border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; color: var(--scan)
+        }
+        .demo { background: var(--bg-panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; margin: 0 auto 26px; max-width: 550px }
+        .demo-code { font-family: var(--mono); font-size: 15px; margin-bottom: 15px; letter-spacing: .01em }
+        .demo-tiles { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap }
+        .demo-card {
+            width: 74px; height: 70px; border-radius: 10px; background: var(--bg-tile);
+            border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center;
+            justify-content: center; gap: 4px; font-size: 10.5px; color: var(--muted); font-family: var(--mono)
+        }
+        .demo-card .em { font-size: 24px; line-height: 1 }
+        .demo-card.hit { outline: 2px solid var(--scan); outline-offset: 2px; box-shadow: 0 0 0 4px var(--scan-glow), 0 0 20px var(--scan-glow) }
+        @media (prefers-reduced-motion: no-preference) {
+            .demo-card.hit { animation: demopulse 2.4s ease-in-out infinite }
+            @keyframes demopulse {
+                0%, 100% { box-shadow: 0 0 0 4px var(--scan-glow), 0 0 18px var(--scan-glow) }
+                50% { box-shadow: 0 0 0 5px var(--scan-glow), 0 0 30px var(--scan-glow) }
+            }
+        }
+        .demo-cap { font-size: 12px; color: var(--faint); margin-top: 14px; font-family: var(--mono); letter-spacing: .02em }
+        .steps { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin: 0 auto 30px; font-family: var(--mono); font-size: 12.5px; color: var(--muted) }
+        .step { display: flex; align-items: center; gap: 8px }
+        .step .n { color: var(--scan); font-weight: 700 }
+        .step .arrow { color: var(--faint) }
+        .cta-row { display: flex; align-items: center; justify-content: center; gap: 22px; flex-wrap: wrap }
+        .enter-btn {
+            font-family: var(--mono); font-weight: 700; font-size: 15px; letter-spacing: .02em;
+            background: var(--scan); color: #0b1230; border: 0; border-radius: 10px;
+            padding: 15px 26px; cursor: pointer; transition: .15s; white-space: nowrap
+        }
+        .enter-btn:hover { filter: brightness(1.08) }
+        .enter-btn:active { transform: translateY(1px) }
+        .land-foot { font-family: var(--mono); font-size: 11.5px; color: var(--faint); margin-top: 30px; letter-spacing: .03em }
+        .land-foot a { color: var(--muted); text-decoration: none }
+        .land-foot a:hover { color: var(--scan) }
+        #homeBtn { white-space: nowrap }
+
+        @media (max-width:520px) {
+            .cta-row { flex-direction: column; gap: 18px }
+            .enter-btn { text-align: center }
+            .steps { gap: 9px; flex-direction: column }
+            .step .arrow { display: none }
+        }
+        @media (max-width:720px) {
+            .stage { grid-template-columns: 1fr }
+            .goal-text { font-size: 18px }
+            .logo { font-size: 19px }
+            .run { padding: 11px 14px }
+            #sel { font-size: 14.5px }
+            .eyebrow .lv { margin-left: 0; width: 100%; order: 5 }
+            .done-inner h1 { font-size: 30px }
+        }
+    </style>
+</head>
+
+<body>
+    <section id="landing">
+        <div class="land-inner">
+            <div class="land-eyebrow">CSS selector game · 21 levels</div>
+            <h1 class="land-word">:<b>is</b>() garden</h1>
+            <p class="land-tag">Learn CSS's grouping selector by playing — write real <code>:is()</code> and watch the right plants light up.</p>
+
+            <p class="land-what"><b>:is()</b> is the grouping selector: it matches an element that fits <b>any</b> selector in its list. <code>:is(h1, h2, h3) a</code> replaces three selectors with one — and when it sits on both sides of a combinator, it multiplies: <code>:is(header, aside) :is(h2, h3)</code> covers four combinations in one line.</p>
+
+            <div class="demo">
+                <div class="demo-code"><span style="color:var(--scan)">:is(</span><span style="color:var(--info)">rose, tulip</span><span style="color:var(--scan)">)</span></div>
+                <div class="demo-tiles">
+                    <div class="demo-card hit"><span class="em">🌹</span><span>rose</span></div>
+                    <div class="demo-card"><span class="em">🌼</span><span>daisy</span></div>
+                    <div class="demo-card hit"><span class="em">🌷</span><span>tulip</span></div>
+                    <div class="demo-card"><span class="em">🍄</span><span>mushroom</span></div>
+                </div>
+                <div class="demo-cap">roses and tulips light up ↑</div>
+            </div>
+
+            <div class="steps">
+                <span class="step"><span class="n">1</span> write a selector</span>
+                <span class="arrow">→</span>
+                <span class="step"><span class="n">2</span> scan the garden</span>
+                <span class="arrow">→</span>
+                <span class="step"><span class="n">3</span> solve to unlock the next</span>
+            </div>
+
+            <div class="cta-row">
+                <button class="enter-btn" id="enterBtn">Play the game →</button>
+            </div>
+
+            <div class="land-foot" id="landFoot">easy → hard → harder · <a href="index.html">← all labs</a></div>
+        </div>
+    </section>
+
+    <div class="wrap" id="game" style="display:none">
+
+        <header class="top">
+            <div class="brand">
+                <span class="logo">:<b>is</b>() garden</span>
+                <span class="tagline">write the selector · scan the garden</span>
+            </div>
+            <button class="ref-btn" id="homeBtn">⌂ home</button>
+            <button class="ref-btn" id="refBtn">[ :is() reference ]</button>
+        </header>
+
+        <div class="tiers" id="tiers"></div>
+        <div class="track" id="track"></div>
+
+        <div class="goal-card">
+            <div class="eyebrow">
+                <span class="tt" id="lvTier" data-t="easy">easy</span><span class="sep">·</span>
+                <span class="cc" id="lvTag">group tags</span>
+                <span class="lv" id="lvNum">level 1 / 21</span>
+            </div>
+            <div class="goal-text" id="goal"></div>
+        </div>
+
+        <div class="stage">
+            <div class="panel">
+                <div class="panel-head"><span class="dot"></span>live preview
+                    <span class="live">matched <b id="matchCount">0</b></span>
+                </div>
+                <div class="preview" id="preview"></div>
+            </div>
+            <div class="panel">
+                <div class="panel-head"><span class="dot"></span>markup</div>
+                <pre class="code" id="code"></pre>
+            </div>
+        </div>
+
+        <div class="console">
+            <div class="prompt">
+                <span class="chev">&gt;</span>
+                <input id="sel" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="type a selector using :is() …">
+                <button class="run" id="run">run scan</button>
+            </div>
+            <div class="readout idle" id="readout">
+                <span class="badge-state">idle</span>
+                <span id="readMsg">Write a selector and run it. Matches glow blue in the preview.</span>
+            </div>
+            <div class="hint-bar" id="hint"></div>
+        </div>
+
+        <div class="controls">
+            <button class="ghost" id="hintBtn">hint</button>
+            <button class="ghost" id="revealBtn">reveal answer</button>
+            <div class="spacer"></div>
+            <div class="nav">
+                <button class="ghost" id="prev">◀ prev</button>
+                <button class="ghost next" id="next" disabled>next ▶</button>
+            </div>
+        </div>
+
+        <footer class="foot">21 levels · easy → hard → harder · solve to unlock the next · progress lives in this tab only</footer>
+    </div>
+
+    <!-- reference drawer -->
+    <div class="scrim" id="scrim"></div>
+    <aside class="drawer" id="drawer" aria-hidden="true">
+        <button class="close" id="closeRef">×</button>
+        <h2>the <b>:is()</b> cheat sheet</h2>
+        <p class="sub">:is() takes a list of selectors and matches an element that fits any of them. It slots anywhere a simple selector can go.</p>
+        <div id="refList"></div>
+    </aside>
+
+    <!-- cheer modal -->
+    <div class="modal-scrim" id="cheerScrim">
+        <div class="cheer">
+            <div class="burst">✦</div>
+            <div class="cheer-tier" id="cheerTier">easy · solved</div>
+            <h2 id="cheerTitle">Nailed it!</h2>
+            <code class="cheer-sel" id="cheerSel"></code>
+            <p class="cheer-learn" id="cheerLearn"></p>
+            <button class="run cheer-next" id="cheerNext">Next level →</button>
+        </div>
+    </div>
+
+    <!-- completion page -->
+    <div class="done-page" id="donePage">
+        <div class="done-inner">
+            <div class="done-mark">✓</div>
+            <p class="done-eyebrow">all levels cleared</p>
+            <h1>You've mastered <b>:is()</b></h1>
+            <div class="done-stats" id="doneStats"></div>
+            <p class="done-msg" id="doneMsg"></p>
+            <button class="run done-restart" id="restart">Start over ↺</button>
+            <div class="done-links"><a href="index.html">← back to all labs</a></div>
+        </div>
+    </div>
+
+    <script>
+        "use strict";
+
+        /*LEVELS-START*/
+        const LEVELS = [
+            /* ---------------- EASY ---------------- */
+            {
+                tier: "easy", tag: "group tags",
+                goal: "Select all the roses and tulips.",
+                html:
+                    `<rose></rose>
+<tulip></tulip>
+<daisy></daisy>
+<tulip></tulip>`,
+                solution: ":is(rose, tulip)",
+                hint: "List both tag names inside the parentheses, separated by a comma: <code>:is(rose, tulip)</code>.",
+                learned: "<b>:is(rose, tulip)</b> matches any element that is a rose OR a tulip — one selector instead of a comma-separated pair repeated through your stylesheet."
+            },
+            {
+                tier: "easy", tag: "any of these",
+                goal: "Select the daisies and sunflowers.",
+                html:
+                    `<daisy></daisy>
+<sunflower></sunflower>
+<rose></rose>
+<daisy></daisy>
+<sunflower></sunflower>`,
+                solution: ":is(daisy, sunflower)",
+                hint: "Same pattern as level 1 — two tag names inside <code>:is(…)</code>.",
+                learned: "The list inside <b>:is()</b> is a set of alternatives — an element matches if it fits <b>any</b> selector in the list."
+            },
+            {
+                tier: "easy", tag: "leave the rest",
+                goal: "Select the mushrooms and pines — leave the trees alone.",
+                html:
+                    `<tree></tree>
+<pine></pine>
+<mushroom></mushroom>
+<tree></tree>
+<mushroom></mushroom>`,
+                solution: ":is(mushroom, pine)",
+                hint: "Only put the tags you WANT inside <code>:is(…)</code> — the trees stay out of the list.",
+                learned: "Only the selectors listed inside <b>:is()</b> count. Trees were never in the list, so they're untouched."
+            },
+            {
+                tier: "easy", tag: "chain a class",
+                goal: "Select the flowers that are red — roses or tulips with the class “red”.",
+                html:
+                    `<rose class="red"></rose>
+<tulip></tulip>
+<tulip class="red"></tulip>
+<daisy></daisy>`,
+                solution: ":is(rose, tulip).red",
+                hint: "Chain the class AFTER the group: <code>:is(rose, tulip).red</code>.",
+                learned: "Conditions chained after <b>:is()</b> apply to the whole group: (rose OR tulip) AND <b>.red</b>. The OR lives inside, the AND lives outside."
+            },
+            {
+                tier: "easy", tag: "class placement",
+                goal: "Select the sleepy critters — bees or butterflies with the class “sleepy”.",
+                html:
+                    `<bee></bee>
+<butterfly></butterfly>
+<bee class="sleepy"></bee>
+<butterfly class="sleepy"></butterfly>`,
+                solution: ":is(bee, butterfly).sleepy",
+                hint: "Group the two critters with <code>:is()</code>, then add <code>.sleepy</code> after the closing parenthesis.",
+                learned: "Placement matters: <b>:is(bee.sleepy, butterfly)</b> would catch ALL butterflies, awake or not. Keep the shared condition outside the list."
+            },
+            {
+                tier: "easy", tag: "inside a parent",
+                goal: "Select the flowers planted inside pots.",
+                html:
+                    `<pot><rose></rose></pot>
+<rose></rose>
+<pot><tulip></tulip></pot>`,
+                solution: "pot :is(rose, tulip)",
+                hint: "Use a descendant combinator (a space): <code>pot :is(rose, tulip)</code>.",
+                learned: "<b>:is()</b> combines with normal combinators. <b>pot :is(rose, tulip)</b> means roses or tulips that live <b>inside a pot</b> — the loose rose is skipped."
+            },
+            {
+                tier: "easy", tag: "specific parent",
+                goal: "Select the flowers in the clay pot — the pot with id “clay”.",
+                html:
+                    `<pot id="clay"><rose></rose><tulip></tulip></pot>
+<pot><rose></rose></pot>`,
+                solution: "#clay :is(rose, tulip)",
+                hint: "Start with the ID selector <code>#clay</code>, then a space, then the <code>:is(…)</code> group.",
+                learned: "An ID pins down one pot; <b>:is(rose, tulip)</b> then collects every matching flower inside it."
+            },
+
+            /* ---------------- HARD ---------------- */
+            {
+                tier: "hard", tag: "first of type",
+                goal: "Select the first rose and the first tulip — the first of each kind.",
+                html:
+                    `<rose></rose>
+<tulip></tulip>
+<rose></rose>
+<tulip></tulip>
+<mushroom></mushroom>`,
+                solution: ":is(rose, tulip):first-of-type",
+                hint: "Add a pseudo-class after the group that means “first of its tag type”: <code>:first-of-type</code>.",
+                learned: "<b>:first-of-type</b> applies per tag name, so it finds the first rose AND the first tulip. <b>:first-child</b> would only catch the literal first element."
+            },
+            {
+                tier: "hard", tag: "last of type",
+                goal: "Select the last pine and the last mushroom.",
+                html:
+                    `<pine></pine>
+<mushroom></mushroom>
+<pine></pine>
+<mushroom></mushroom>
+<tree></tree>`,
+                solution: ":is(pine, mushroom):last-of-type",
+                hint: "Like the previous level, but the LAST of each type: <code>:last-of-type</code>.",
+                learned: "<b>:last-child</b> matches nothing here — the last element is the tree! <b>:last-of-type</b> checks each tag name separately."
+            },
+            {
+                tier: "hard", tag: "direct child",
+                goal: "Select the roses sitting directly in a pot or basket — direct children only.",
+                html:
+                    `<pot><rose></rose></pot>
+<basket><rose></rose></basket>
+<pot><tray><rose></rose></tray></pot>`,
+                solution: ":is(pot, basket) > rose",
+                hint: "Group the containers with <code>:is()</code>, then use the child combinator: <code>:is(pot, basket) &gt; rose</code>.",
+                learned: "The <b>&gt;</b> after <b>:is()</b> excludes the rose hiding in the tray — it's inside a pot, but not a <b>direct child</b> of one."
+            },
+            {
+                tier: "hard", tag: "negation",
+                goal: "Select the critters that are NOT tired.",
+                html:
+                    `<bee></bee>
+<bee class="tired"></bee>
+<butterfly></butterfly>
+<rose></rose>
+<butterfly class="tired"></butterfly>
+<bee></bee>`,
+                solution: ":is(bee, butterfly):not(.tired)",
+                hint: "Combine the group with a negation: <code>:is(bee, butterfly):not(.tired)</code>.",
+                learned: "<b>:is()</b> pairs beautifully with <b>:not()</b>. A bare <b>:not(.tired)</b> would also catch the rose — it isn't tired either!"
+            },
+            {
+                tier: "hard", tag: "grouped parents",
+                goal: "Select the daisies growing in pot #a or pot #b.",
+                html:
+                    `<pot id="a"><daisy></daisy></pot>
+<pot id="b"><daisy></daisy><rose></rose></pot>
+<pot id="c"><daisy></daisy></pot>`,
+                solution: ":is(#a, #b) daisy",
+                hint: "Put the two IDs inside <code>:is(…)</code>, then a space, then <code>daisy</code>.",
+                learned: "<b>:is(#a, #b) daisy</b> targets several specific parents at once — instead of writing <b>#a daisy, #b daisy</b> long-hand."
+            },
+            {
+                tier: "hard", tag: "next sibling",
+                goal: "Select the flower immediately after each bee.",
+                html:
+                    `<bee></bee>
+<rose></rose>
+<tulip></tulip>
+<bee></bee>
+<tulip></tulip>
+<rose></rose>`,
+                solution: "bee + :is(rose, tulip)",
+                hint: "Use the adjacent-sibling combinator before the group: <code>bee + :is(rose, tulip)</code>.",
+                learned: "<b>+</b> picks only the <b>very next</b> sibling. A <b>~</b> would grab every rose and tulip anywhere after a bee."
+            },
+            {
+                tier: "hard", tag: "attribute",
+                goal: "Select the roses and tulips whose color attribute is “red”.",
+                html:
+                    `<rose color="red"></rose>
+<tulip color="yellow"></tulip>
+<tulip color="red"></tulip>
+<daisy color="red"></daisy>`,
+                solution: ':is(rose, tulip)[color="red"]',
+                hint: "Chain an attribute selector after the group: <code>:is(rose, tulip)[color=&quot;red&quot;]</code>.",
+                learned: "Attribute selectors chain onto <b>:is()</b> too. A bare <b>[color=&quot;red&quot;]</b> would also select the red daisy."
+            },
+
+            /* ---------------- HARDER ---------------- */
+            {
+                tier: "harder", tag: "double :is()",
+                goal: "Select the roses or tulips that are red or pink.",
+                html:
+                    `<rose class="red"></rose>
+<rose class="blue"></rose>
+<tulip class="pink"></tulip>
+<daisy class="red"></daisy>
+<tulip></tulip>`,
+                solution: ":is(rose, tulip):is(.red, .pink)",
+                hint: "Use TWO <code>:is()</code> back to back — one for the tags, one for the classes.",
+                learned: "Two <b>:is()</b> in a row form an AND of two OR-lists: (rose OR tulip) AND (red OR pink) — four combinations in one compact selector."
+            },
+            {
+                tier: "harder", tag: "both sides",
+                goal: "Select the critters resting inside a pot or basket.",
+                html:
+                    `<pot><bee></bee></pot>
+<basket><butterfly></butterfly></basket>
+<tray><bee></bee></tray>
+<butterfly></butterfly>
+<pot><butterfly></butterfly></pot>`,
+                solution: ":is(pot, basket) :is(bee, butterfly)",
+                hint: "<code>:is()</code> on both sides of a space — containers first, critters second.",
+                learned: "<b>:is()</b> can sit on <b>both sides</b> of a combinator. Any critter inside any listed container — and the tray doesn't count."
+            },
+            {
+                tier: "harder", tag: "position filter",
+                goal: "Select every rose and tulip except the very first element in the row.",
+                html:
+                    `<rose></rose>
+<tulip></tulip>
+<rose></rose>
+<daisy></daisy>
+<tulip></tulip>`,
+                solution: ":is(rose, tulip):not(:first-child)",
+                hint: "Filter the group by position: add <code>:not(:first-child)</code> after <code>:is(…)</code>.",
+                learned: "Stacking <b>:not(:first-child)</b> after <b>:is()</b> filters the group by position. A bare <b>:not(:first-child)</b> would include the daisy."
+            },
+            {
+                tier: "harder", tag: "nth parent",
+                goal: "Select the plants inside the second pot.",
+                html:
+                    `<pot><rose></rose><sprout></sprout></pot>
+<pot><sprout></sprout><tulip></tulip></pot>
+<pot><rose></rose></pot>`,
+                solution: "pot:nth-of-type(2) :is(sprout, tulip)",
+                hint: "Pin the pot with <code>pot:nth-of-type(2)</code>, then group the plants inside it with <code>:is()</code>.",
+                learned: "<b>pot:nth-of-type(2)</b> pins down one parent; <b>:is(sprout, tulip)</b> then gathers everything growing in it."
+            },
+            {
+                tier: "harder", tag: "sibling pairs",
+                goal: "Select the flowers immediately after ANY critter — bee or butterfly.",
+                html:
+                    `<bee></bee>
+<rose></rose>
+<butterfly></butterfly>
+<tulip></tulip>
+<rose></rose>
+<bee></bee>
+<daisy></daisy>`,
+                solution: ":is(bee, butterfly) + :is(rose, tulip)",
+                hint: "<code>:is()</code> on both sides of the <code>+</code> combinator.",
+                learned: "<b>:is()</b> on both sides of <b>+</b> covers four sibling pairs at once. The daisy after the last bee escapes — it was never in the second list."
+            },
+            {
+                tier: "harder", tag: "child pairs",
+                goal: "Select the roses and tulips that are direct children of a pot or basket.",
+                html:
+                    `<pot><rose></rose><daisy></daisy></pot>
+<basket><tulip></tulip></basket>
+<pot><tray><tulip></tulip></tray></pot>
+<rose></rose>`,
+                solution: ":is(pot, basket) > :is(rose, tulip)",
+                hint: "<code>:is()</code> on both sides of the child combinator <code>&gt;</code>.",
+                learned: "One selector replacing FOUR: <b>pot &gt; rose, pot &gt; tulip, basket &gt; rose, basket &gt; tulip</b>. That's the power of :is()."
+            },
+            {
+                tier: "harder", tag: "capstone",
+                goal: "Final bloom — select the fresh (not wilted) roses and tulips growing directly in a pot or basket.",
+                html:
+                    `<pot><rose></rose><rose class="wilted"></rose></pot>
+<basket><tulip></tulip><daisy></daisy></basket>
+<tulip></tulip>
+<basket><rose class="wilted"></rose></basket>`,
+                solution: ":is(pot, basket) > :is(rose, tulip):not(.wilted)",
+                hint: "Combine everything: <code>:is(containers) &gt; :is(flowers):not(.wilted)</code>.",
+                learned: "The grand finale stacks it all: <b>:is()</b> for containers, <b>&gt;</b> for direct children, <b>:is()</b> for flowers, and <b>:not()</b> to skip the wilted ones."
+            }
+        ];
+        /*LEVELS-END*/
+
+        const REF = [
+            [":is(A, B)", "Matches any element that is an A or a B."],
+            [":is(A, B).x", "An A or B that ALSO has class x — OR inside, AND outside."],
+            ["P :is(A, B)", "An A or B anywhere inside a P."],
+            [":is(P, Q) > A", "An A that is a direct child of a P or a Q."],
+            [":is(P, Q) :is(A, B)", "Expands to four selectors: P A, P B, Q A, Q B."],
+            [":is(A, B):not(.x)", "The group, minus anything with class x."],
+            [":is(A, B):first-of-type", "The first A and the first B — per tag name."],
+            ["A + :is(B, C)", "A B or C that immediately follows an A."],
+            [":is(A, B):is(.x, .y)", "Two lists ANDed: (A or B) and (.x or .y)."],
+            [":is(A, B)[attr=\"v\"]", "Attribute filters chain onto the group too."],
+            [":where(A, B)", "Same as :is() but adds zero specificity."],
+            [":is() specificity", "Takes the specificity of its most specific argument."],
+            [":is() is forgiving", "One invalid selector in the list is ignored — the rest still work."]
+        ];
+
+        const CHEERS = ["Blooming brilliant!", "Selector locked!", "Clean sweep!", "That's the set!", "Perfectly grouped!", "Sharp eye!", "Petal to the metal!"];
+
+        // ---------- state ----------
+        let current = 0;
+        let maxUnlocked = 0;
+        const solved = new Set();
+        const revealed = new Set();
+
+        // ---------- persistence (survives browser refresh) ----------
+        const STORE_KEY = "isGardenProgress_v1";
+        let canPersist = false;
+        try { localStorage.setItem("__ig_test", "1"); localStorage.removeItem("__ig_test"); canPersist = true; } catch (e) { }
+
+        const store = {
+            load() { try { const r = localStorage.getItem(STORE_KEY); return r ? JSON.parse(r) : null; } catch (e) { return null; } },
+            save(o) { try { localStorage.setItem(STORE_KEY, JSON.stringify(o)); } catch (e) { } },
+            clear() { try { localStorage.removeItem(STORE_KEY); } catch (e) { } }
+        };
+        function persist() {
+            store.save({ current, maxUnlocked, solved: [...solved], revealed: [...revealed] });
+        }
+        function restoreProgress() {
+            const saved = store.load();
+            if (saved) {
+                maxUnlocked = Math.min(Math.max(saved.maxUnlocked || 0, 0), LEVELS.length - 1);
+                (saved.solved || []).forEach(i => { if (i >= 0 && i < LEVELS.length) solved.add(i); });
+                (saved.revealed || []).forEach(i => { if (i >= 0 && i < LEVELS.length) revealed.add(i); });
+                current = Math.min(Math.max(saved.current || 0, 0), maxUnlocked);
+            }
+            document.querySelector(".foot").textContent = canPersist
+                ? "21 levels · easy → hard → harder · solve to unlock the next · progress is saved in this browser"
+                : "21 levels · easy → hard → harder · solve to unlock the next · progress lives in this tab only";
+        }
+
+        const $ = id => document.getElementById(id);
+        const preview = $("preview"), code = $("code"), sel = $("sel");
+        const readout = $("readout"), readMsg = $("readMsg"), matchCount = $("matchCount"), track = $("track");
+        const nextBtn = $("next"), prevBtn = $("prev");
+        const isLast = () => current === LEVELS.length - 1;
+
+        // ---------- markup highlighter ----------
+        function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+        function hlTag(tag) {
+            let s = esc(tag);
+            s = s.replace(/^(&lt;\/?)([\w-]+)/, '<span class="t-punc">$1</span><span class="t-tag">$2</span>');
+            s = s.replace(/(\/?&gt;)$/, '<span class="t-punc">$1</span>');
+            s = s.replace(/([\w-]+)=(&quot;[^&]*&quot;)/g, '<span class="t-attr">$1</span><span class="t-punc">=</span><span class="t-str">$2</span>');
+            return s;
+        }
+        function highlight(raw) {
+            let out = "", i = 0;
+            while (i < raw.length) {
+                if (raw[i] === "<") { let j = raw.indexOf(">", i); if (j === -1) j = raw.length - 1; out += hlTag(raw.slice(i, j + 1)); i = j + 1; }
+                else { let j = raw.indexOf("<", i); if (j === -1) j = raw.length; out += '<span class="t-text">' + esc(raw.slice(i, j)) + '</span>'; i = j; }
+            }
+            return out;
+        }
+
+        // ---------- specimen labels ----------
+        function sig(el) {
+            let s = el.tagName.toLowerCase();
+            if (el.id) s += "#" + el.id;
+            if (el.className) s += "." + String(el.className).trim().split(/\s+/).join(".");
+            for (const a of el.attributes) {
+                if (a.name !== "id" && a.name !== "class" && a.name !== "data-sig") s += `[${a.name}=${a.value}]`;
+            }
+            if (/\b(sleepy|tired)\b/.test(el.className)) s += " 💤";
+            return s;
+        }
+        function annotate() {
+            preview.querySelectorAll("*").forEach(el => el.setAttribute("data-sig", sig(el)));
+        }
+
+        // ---------- helpers ----------
+        function clearMarks() { preview.querySelectorAll(".scan-hit,.scan-miss,.scan-solved").forEach(el => el.classList.remove("scan-hit", "scan-miss", "scan-solved")); }
+        function expectedSet() { return [...preview.querySelectorAll(LEVELS[current].solution)]; }
+        function tierLabel(t) { return t === "easy" ? "Easy" : t === "hard" ? "Hard" : "Harder"; }
+
+        function renderTiers() {
+            const order = ["easy", "hard", "harder"];
+            const cur = LEVELS[current].tier;
+            const counts = {}; order.forEach(t => counts[t] = LEVELS.filter(l => l.tier === t).length);
+            $("tiers").innerHTML = order.map(t =>
+                `<span class="tier-pill ${t === cur ? "on" : ""}" data-t="${t}">${tierLabel(t)} · ${counts[t]}</span>`).join("");
+        }
+        function renderTrack() {
+            track.innerHTML = "";
+            LEVELS.forEach((lv, i) => {
+                const s = document.createElement("div");
+                let cls = "seg";
+                if (solved.has(i)) cls += " done";
+                if (revealed.has(i)) cls += " revealed";
+                if (i === current) cls += " here";
+                if (i > maxUnlocked) cls += " locked";
+                s.className = cls;
+                s.dataset.tier = lv.tier;
+                s.title = (i > maxUnlocked ? "Locked — " : "Level ") + (i + 1) + " · " + tierLabel(lv.tier);
+                s.onclick = () => { if (i <= maxUnlocked) { current = i; loadLevel(); } };
+                track.appendChild(s);
+            });
+        }
+        function updateNav() {
+            nextBtn.disabled = !solved.has(current);
+            nextBtn.textContent = isLast() ? "finish ▶" : "next ▶";
+            prevBtn.disabled = current === 0;
+        }
+        function setReadout(state, msg) {
+            readout.className = "readout " + state;
+            readout.querySelector(".badge-state").textContent = state;
+            readMsg.textContent = msg;
+        }
+
+        function loadLevel() {
+            closeCheer(); $("donePage").classList.remove("show");
+            const lv = LEVELS[current];
+            const tt = $("lvTier"); tt.textContent = tierLabel(lv.tier).toLowerCase(); tt.dataset.t = lv.tier;
+            $("lvTag").textContent = lv.tag;
+            $("lvNum").textContent = "level " + (current + 1) + " / " + LEVELS.length;
+            $("goal").textContent = lv.goal;
+            preview.innerHTML = lv.html;
+            annotate();
+            code.innerHTML = highlight(lv.html);
+            sel.value = ""; matchCount.textContent = "0";
+            $("hint").className = "hint-bar"; $("hint").innerHTML = "";
+            setReadout("idle", "Write a selector and run it. Matches glow blue in the preview.");
+            renderTiers(); renderTrack(); updateNav(); persist();
+            sel.focus();
+        }
+
+        // live match while typing
+        function liveScan() {
+            clearMarks();
+            const q = sel.value.trim();
+            if (!q) { matchCount.textContent = "0"; return; }
+            let hits;
+            try { hits = [...preview.querySelectorAll(q)]; } catch (e) { matchCount.textContent = "—"; return; }
+            hits.forEach(el => el.classList.add("scan-hit"));
+            matchCount.textContent = hits.length;
+        }
+
+        // solve bookkeeping
+        function markSolved(viaReveal) {
+            solved.add(current);
+            if (viaReveal) revealed.add(current);
+            if (current === maxUnlocked && current < LEVELS.length - 1) maxUnlocked = current + 1;
+            renderTrack(); updateNav(); persist();
+        }
+
+        // grade (Run scan / Enter)
+        function runScan() {
+            const q = sel.value.trim();
+            clearMarks();
+            if (!q) { setReadout("idle", "Nothing to scan yet — type a selector first."); matchCount.textContent = "0"; return; }
+            let hits;
+            try { hits = [...preview.querySelectorAll(q)]; } catch (e) { setReadout("err", "That selector won't parse. Check your brackets and commas."); matchCount.textContent = "—"; return; }
+            matchCount.textContent = hits.length;
+
+            if (!/:is\(/i.test(q)) { hits.forEach(el => el.classList.add("scan-hit")); setReadout("warn", "Use :is() — that's the whole point of this garden."); return; }
+
+            const exp = expectedSet();
+            const missing = exp.filter(e => !hits.includes(e));
+            const extra = hits.filter(e => !exp.includes(e));
+
+            if (missing.length === 0 && extra.length === 0) {
+                hits.forEach(el => el.classList.add("scan-solved"));
+                const n = hits.length;
+                setReadout("ok", "Solved — " + n + " element" + (n === 1 ? "" : "s") + ", exactly the target set.");
+                markSolved(false);
+                if (isLast()) { setTimeout(showCompletion, 550); }
+                else { setTimeout(showCheer, 450); }
+                return;
+            }
+
+            hits.forEach(el => el.classList.add(exp.includes(el) ? "scan-hit" : "scan-miss"));
+            let msg;
+            if (extra.length > 0 && missing.length === 0) msg = "Close — " + extra.length + " of these shouldn't be caught (coral). Tighten the selector.";
+            else if (missing.length > 0 && extra.length === 0) msg = hits.length + " matched, but " + missing.length + " more fit the goal. Widen your reach.";
+            else msg = "Not the right set — " + extra.length + " wrongly caught (coral), and some targets are still missing.";
+            setReadout("err", msg);
+        }
+
+        // ---------- cheer modal ----------
+        function showCheer() {
+            const lv = LEVELS[current];
+            $("cheerTier").textContent = tierLabel(lv.tier).toLowerCase() + " · solved";
+            $("cheerTitle").textContent = CHEERS[Math.floor(Math.random() * CHEERS.length)];
+            $("cheerSel").textContent = lv.solution;
+            $("cheerLearn").innerHTML = lv.learned;
+            $("cheerNext").textContent = (current + 1 < LEVELS.length && LEVELS[current + 1].tier !== lv.tier)
+                ? "Next level → " + tierLabel(LEVELS[current + 1].tier) : "Next level →";
+            $("cheerScrim").classList.add("show");
+            $("cheerNext").focus();
+        }
+        function closeCheer() { $("cheerScrim").classList.remove("show"); }
+        function goNext() {
+            closeCheer();
+            if (!isLast()) { current++; loadLevel(); }
+            else showCompletion();
+        }
+
+        // ---------- completion ----------
+        function fireConfetti() {
+            const cols = ["#8aa2f5", "#f5b54b", "#c084fc", "#4ade80", "#2dd4bf"];
+            for (let i = 0; i < 70; i++) {
+                const c = document.createElement("div");
+                c.className = "confetti";
+                c.style.left = Math.random() * 100 + "vw";
+                c.style.background = cols[i % cols.length];
+                c.style.animationDuration = (2.6 + Math.random() * 2.4) + "s";
+                c.style.animationDelay = (Math.random() * 0.6) + "s";
+                c.style.transform = "rotate(" + (Math.random() * 360) + "deg)";
+                document.body.appendChild(c);
+                setTimeout(() => c.remove(), 5600);
+            }
+        }
+        function showCompletion() {
+            closeCheer();
+            const total = LEVELS.length, clean = total - revealed.size;
+            $("doneStats").innerHTML =
+                `<div class="stat"><div class="num">${total}</div><div class="lbl">levels cleared</div></div>
+     <div class="stat"><div class="num good">${clean}</div><div class="lbl">solved solo</div></div>
+     <div class="stat"><div class="num">${revealed.size}</div><div class="lbl">revealed</div></div>`;
+            $("doneMsg").textContent = revealed.size === 0
+                ? "A perfect run — every selector figured out on your own. You've got :is() cold."
+                : "Solid work across all three tiers. Restart and try for a clean run with zero reveals.";
+            $("donePage").classList.add("show");
+            $("restart").focus();
+            fireConfetti();
+        }
+        function restart() {
+            current = 0; maxUnlocked = 0; solved.clear(); revealed.clear();
+            store.clear();
+            $("donePage").classList.remove("show");
+            loadLevel();
+        }
+
+        // ---------- reference ----------
+        function buildRef() {
+            $("refList").innerHTML = REF.map(([c, d]) => `<div class="ref-row"><code>${esc(c)}</code><span>${d}</span></div>`).join("");
+        }
+        function openRef(o) { $("drawer").classList.toggle("show", o); $("scrim").classList.toggle("show", o); $("drawer").setAttribute("aria-hidden", String(!o)); }
+
+        // ---------- landing ----------
+        function showLanding() { $("landing").classList.add("show"); $("game").style.display = "none"; window.scrollTo(0, 0); }
+        function enterGame() {
+            if (solved.size === LEVELS.length) current = 0;   // finished — replay from the top
+            $("landing").classList.remove("show"); $("game").style.display = ""; loadLevel(); window.scrollTo(0, 0);
+        }
+
+        // ---------- wire up ----------
+        $("run").onclick = runScan;
+        sel.addEventListener("input", liveScan);
+        sel.addEventListener("keydown", e => { if (e.key === "Enter") runScan(); });
+        nextBtn.onclick = goNext;
+        prevBtn.onclick = () => { if (current > 0) { current--; loadLevel(); } };
+        $("hintBtn").onclick = () => { const h = $("hint"); if (h.classList.contains("show")) h.classList.remove("show"); else { h.innerHTML = LEVELS[current].hint; h.classList.add("show"); } };
+        $("revealBtn").onclick = () => {
+            sel.value = LEVELS[current].solution; liveScan();
+            clearMarks(); expectedSet().forEach(el => el.classList.add("scan-solved"));
+            markSolved(true);
+            setReadout("warn", "Revealed one correct answer — level unlocked. Study why it lights up the right set.");
+        };
+        $("refBtn").onclick = () => openRef(true);
+        $("closeRef").onclick = () => openRef(false);
+        $("scrim").onclick = () => openRef(false);
+        $("cheerNext").onclick = goNext;
+        $("restart").onclick = restart;
+        $("enterBtn").onclick = enterGame;
+        $("homeBtn").onclick = showLanding;
+        document.addEventListener("keydown", e => {
+            if (e.key === "Escape") { openRef(false); closeCheer(); }
+            if (e.key === "Enter" && $("cheerScrim").classList.contains("show")) { goNext(); }
+            if (e.key === "Enter" && $("landing").classList.contains("show")) { enterGame(); }
+        });
+
+        buildRef();
+        restoreProgress();
+        showLanding();
+    </script>
+</body>
+
+</html>
